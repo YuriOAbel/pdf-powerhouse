@@ -52,53 +52,55 @@ export const ToolPanel = ({ onImageSelect, onAddText, onAddStamp, onAddNote }: T
     }
   };
 
+  const shouldShowPanel = showToolPanel && activeTool !== 'select' && activeTool !== 'eraser';
+
+  if (!shouldShowPanel) return null;
+
   return (
-    <AnimatePresence>
-      {showToolPanel && activeTool !== 'select' && activeTool !== 'eraser' && (
-        <>
-          {/* Backdrop - mobile only */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 z-40 md:hidden"
+    <AnimatePresence mode="wait">
+      {/* Backdrop */}
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/40 z-[100]"
+        onClick={() => setShowToolPanel(false)}
+      />
+      
+      {/* Panel - Bottom sheet on mobile, centered modal on desktop */}
+      <motion.div
+        key="panel"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="fixed bottom-0 left-0 right-0 z-[101] bg-card border-t border-border rounded-t-2xl shadow-2xl max-h-[80vh] overflow-hidden
+                   md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:max-h-[600px] md:w-96 md:border"
+      >
+        {/* Handle for mobile */}
+        <div className="flex justify-center pt-3 pb-1 md:hidden">
+          <div className="w-10 h-1 bg-muted-foreground/40 rounded-full" />
+        </div>
+        
+        {/* Header */}
+        <div className="sticky top-0 bg-card flex items-center justify-between px-4 py-3 border-b border-border z-10">
+          <h3 className="font-semibold text-lg text-foreground">{getPanelTitle(activeTool)}</h3>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowToolPanel(false)}
-          />
-          
-          {/* Panel */}
-          <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-3xl shadow-lg max-h-[70vh] overflow-y-auto
-                       md:absolute md:top-full md:bottom-auto md:left-4 md:right-auto md:mt-2 md:rounded-xl md:max-h-[500px] md:w-80 md:border"
+            className="h-9 w-9 rounded-full"
           >
-            {/* Handle for mobile */}
-            <div className="flex justify-center pt-2 md:hidden">
-              <div className="w-12 h-1 bg-muted-foreground/30 rounded-full" />
-            </div>
-            
-            {/* Header */}
-            <div className="sticky top-0 bg-card flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground">{getPanelTitle(activeTool)}</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowToolPanel(false)}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {/* Content */}
-            <div className="p-4">
-              {renderPanel()}
-            </div>
-          </motion.div>
-        </>
-      )}
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        {/* Content - Scrollable */}
+        <div className="p-4 overflow-y-auto max-h-[calc(80vh-80px)] md:max-h-[calc(600px-80px)]">
+          {renderPanel()}
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 };
