@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -29,6 +29,8 @@ export const PDFViewerEmbed = ({
   const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const hasCalledOnLoad = useRef(false);
+  const hasCalledOnError = useRef(false);
 
   // Load the PDF file into an ArrayBuffer
   useEffect(() => {
@@ -72,16 +74,18 @@ export const PDFViewerEmbed = ({
     ];
   }, [pdfData, documentName]);
 
-  // Handle engine initialization complete
+  // Handle engine initialization complete (call only once)
   useEffect(() => {
-    if (engine && pdfData && !engineLoading) {
+    if (engine && pdfData && !engineLoading && !hasCalledOnLoad.current) {
+      hasCalledOnLoad.current = true;
       onLoad?.();
     }
   }, [engine, pdfData, engineLoading, onLoad]);
 
-  // Handle engine error
+  // Handle engine error (call only once)
   useEffect(() => {
-    if (engineError) {
+    if (engineError && !hasCalledOnError.current) {
+      hasCalledOnError.current = true;
       onError?.(engineError);
     }
   }, [engineError, onError]);
