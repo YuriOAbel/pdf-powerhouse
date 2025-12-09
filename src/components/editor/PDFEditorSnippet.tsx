@@ -10,18 +10,6 @@ interface PDFEditorSnippetProps {
   onError?: (error: Error) => void;
 }
 
-declare global {
-  interface Window {
-    EmbedPDF?: {
-      init: (config: {
-        type: 'container';
-        target: HTMLElement;
-        src: string;
-      }) => unknown;
-    };
-  }
-}
-
 export const PDFEditorSnippet = ({ 
   pdfUrl, 
   onLoad, 
@@ -31,9 +19,21 @@ export const PDFEditorSnippet = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
+  
+  // Use refs for callbacks to avoid dependency issues
+  const onLoadRef = useRef(onLoad);
+  const onErrorRef = useRef(onError);
+  
+  // Keep refs updated
+  useEffect(() => {
+    onLoadRef.current = onLoad;
+    onErrorRef.current = onError;
+  });
 
   useEffect(() => {
     if (!pdfUrl || !containerRef.current || initialized.current) return;
+
+    let hasLoaded = false;
 
     const loadEmbedPDF = async () => {
       try {
@@ -61,9 +61,11 @@ export const PDFEditorSnippet = ({
         (window as unknown as { __EMBEDPDF_URL__: string }).__EMBEDPDF_URL__ = pdfUrl;
         
         const handleLoaded = () => {
+          if (hasLoaded) return;
+          hasLoaded = true;
           initialized.current = true;
           setIsLoading(false);
-          onLoad?.();
+          onLoadRef.current?.();
           window.removeEventListener('embedpdf-loaded', handleLoaded);
         };
         
@@ -71,9 +73,11 @@ export const PDFEditorSnippet = ({
         
         // Add timeout fallback
         setTimeout(() => {
-          if (isLoading) {
+          if (!hasLoaded) {
+            hasLoaded = true;
+            initialized.current = true;
             setIsLoading(false);
-            onLoad?.();
+            onLoadRef.current?.();
           }
         }, 3000);
 
@@ -83,23 +87,17 @@ export const PDFEditorSnippet = ({
         const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar o editor de PDF';
         setError(errorMessage);
         setIsLoading(false);
-        onError?.(err instanceof Error ? err : new Error(errorMessage));
+        onErrorRef.current?.(err instanceof Error ? err : new Error(errorMessage));
       }
     };
 
     loadEmbedPDF();
-
-    // Cleanup
-    return () => {
-      initialized.current = false;
-    };
-  }, [pdfUrl, onLoad, onError]);
+  }, [pdfUrl]);
 
   const handleRetry = () => {
     initialized.current = false;
     setError(null);
     setIsLoading(true);
-    // Force re-run by updating a dependency - we'll just reload
     window.location.reload();
   };
 
