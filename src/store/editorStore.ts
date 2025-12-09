@@ -15,6 +15,8 @@ export interface TextSettings {
   fontColor: string;
   isBold: boolean;
   isItalic: boolean;
+  isUnderline: boolean;
+  alignment: 'left' | 'center' | 'right';
 }
 
 export interface DrawSettings {
@@ -32,6 +34,7 @@ export interface StampSettings {
 export interface NoteSettings {
   text: string;
   color: string;
+  style: 'sticky' | 'comment' | 'flag' | 'star';
 }
 
 export interface EditorState {
@@ -101,6 +104,8 @@ const initialTextSettings: TextSettings = {
   fontColor: '#000000',
   isBold: false,
   isItalic: false,
+  isUnderline: false,
+  alignment: 'left',
 };
 
 const initialDrawSettings: DrawSettings = {
@@ -118,6 +123,7 @@ const initialStampSettings: StampSettings = {
 const initialNoteSettings: NoteSettings = {
   text: '',
   color: '#fbbf24',
+  style: 'sticky',
 };
 
 const initialState = {
