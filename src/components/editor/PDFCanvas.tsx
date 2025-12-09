@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Canvas, FabricImage } from 'fabric';
+import { fabric } from 'fabric';
 import { useEditorStore } from '@/store/editorStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 
 interface PDFCanvasProps {
   pageImage: string | null;
-  fabricCanvasRef: React.MutableRefObject<Canvas | null>;
+  fabricCanvasRef: React.MutableRefObject<fabric.Canvas | null>;
 }
 
 export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
@@ -34,7 +34,7 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
     }
 
     // Carregar imagem primeiro para obter dimensões
-    FabricImage.fromURL(pageImage).then((img) => {
+    fabric.Image.fromURL(pageImage, (img) => {
       if (!img || !canvasRef.current) return;
       
       const imgWidth = img.width || 800;
@@ -46,7 +46,7 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
       const canvasHeight = imgHeight * scale;
       
       // Criar canvas com dimensões da imagem
-      const canvas = new Canvas(canvasRef.current, {
+      const canvas = new fabric.Canvas(canvasRef.current, {
         width: canvasWidth,
         height: canvasHeight,
         backgroundColor: '#ffffff',
@@ -61,8 +61,7 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
         originY: 'top',
       });
       
-      canvas.backgroundImage = img;
-      canvas.renderAll();
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
 
       // Configurar brush
       if (canvas.freeDrawingBrush) {

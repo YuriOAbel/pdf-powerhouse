@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Canvas } from 'fabric';
+import { fabric } from 'fabric';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const EditorPage = () => {
   const navigate = useNavigate();
-  const fabricCanvasRef = useRef<Canvas | null>(null);
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [pageImages, setPageImages] = useState<string[]>([]);
   
