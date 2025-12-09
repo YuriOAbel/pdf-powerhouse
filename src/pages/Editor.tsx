@@ -82,12 +82,14 @@ const EditorPage = () => {
       </header>
       
       {/* PDF Viewer - Full Height */}
-      <PDFViewerEmbed 
-        pdfUrl={pdfUrl}
-        documentName={pdfFile?.name}
-        onLoad={handlePdfLoad}
-        onError={handlePdfError}
-      />
+      {pdfFile && (
+        <PDFViewerEmbed 
+          pdfFile={pdfFile}
+          documentName={pdfFile.name}
+          onLoad={handlePdfLoad}
+          onError={handlePdfError}
+        />
+      )}
       
       {/* Export Modal */}
       <ExportModal onExport={handleExport} />

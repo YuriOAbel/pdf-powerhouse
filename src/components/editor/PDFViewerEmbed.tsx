@@ -1,150 +1,115 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
+import { createPluginRegistration } from '@embedpdf/core';
+import { EmbedPDF } from '@embedpdf/core/react';
+import { usePdfiumEngine } from '@embedpdf/engines/react';
+import { Viewport, ViewportPluginPackage } from '@embedpdf/plugin-viewport/react';
+import { Scroller, ScrollPluginPackage } from '@embedpdf/plugin-scroll/react';
+import { LoaderPluginPackage } from '@embedpdf/plugin-loader/react';
+import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/react';
+import { ZoomPluginPackage } from '@embedpdf/plugin-zoom/react';
+
 interface PDFViewerEmbedProps {
-  pdfUrl: string;
+  pdfFile: File;
   documentName?: string;
   onLoad?: () => void;
   onError?: (error: Error) => void;
 }
 
-interface EmbedPDFViewer {
-  destroy: () => void;
-}
-
-interface EmbedPDFModule {
-  init: (config: {
-    type: 'container';
-    target: HTMLElement;
-    src: string;
-  }) => EmbedPDFViewer;
-}
-
-declare global {
-  interface Window {
-    EmbedPDF?: EmbedPDFModule;
-  }
-}
-
-// Load EmbedPDF script from CDN
-const loadEmbedPDFScript = (): Promise<EmbedPDFModule> => {
-  return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (window.EmbedPDF) {
-      resolve(window.EmbedPDF);
-      return;
-    }
-
-    // Create and load script
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.textContent = `
-      import EmbedPDF from 'https://snippet.embedpdf.com/embedpdf.js';
-      window.EmbedPDF = EmbedPDF;
-      window.dispatchEvent(new CustomEvent('embedpdf-loaded'));
-    `;
-
-    const handleLoad = () => {
-      if (window.EmbedPDF) {
-        resolve(window.EmbedPDF);
-      } else {
-        reject(new Error('EmbedPDF failed to initialize'));
-      }
-      window.removeEventListener('embedpdf-loaded', handleLoad);
-    };
-
-    window.addEventListener('embedpdf-loaded', handleLoad);
-
-    // Timeout fallback
-    setTimeout(() => {
-      if (!window.EmbedPDF) {
-        reject(new Error('EmbedPDF load timeout'));
-      }
-    }, 10000);
-
-    document.head.appendChild(script);
-  });
-};
-
 export const PDFViewerEmbed = ({ 
-  pdfUrl, 
+  pdfFile, 
   documentName, 
   onLoad, 
   onError 
 }: PDFViewerEmbedProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<EmbedPDFViewer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const initViewer = useCallback(async () => {
-    if (!containerRef.current || !pdfUrl) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Destroy previous viewer if exists
-      if (viewerRef.current) {
-        viewerRef.current.destroy();
-        viewerRef.current = null;
-      }
-
-      // Clear container
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
-
-      const EmbedPDF = await loadEmbedPDFScript();
-
-      if (!containerRef.current) return;
-
-      // Initialize EmbedPDF
-      viewerRef.current = EmbedPDF.init({
-        type: 'container',
-        target: containerRef.current,
-        src: pdfUrl,
-      });
-
-      setIsLoading(false);
-      onLoad?.();
-    } catch (err) {
-      console.error('Error loading EmbedPDF:', err);
-      setError('Falha ao carregar o visualizador de PDF. Tente recarregar.');
-      setIsLoading(false);
-      onError?.(err instanceof Error ? err : new Error(String(err)));
-    }
-  }, [pdfUrl, onLoad, onError]);
-
+  // Load the PDF file into an ArrayBuffer
   useEffect(() => {
-    initViewer();
+    if (!pdfFile) return;
 
-    return () => {
-      if (viewerRef.current) {
-        try {
-          viewerRef.current.destroy();
-        } catch (e) {
-          // Ignore destroy errors
-        }
-        viewerRef.current = null;
+    const loadFile = async () => {
+      try {
+        const buffer = await pdfFile.arrayBuffer();
+        setPdfData(buffer);
+        setLoadError(null);
+      } catch (err) {
+        console.error('Error loading PDF file:', err);
+        setLoadError('Falha ao carregar o arquivo PDF.');
+        onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     };
-  }, [initViewer]);
 
-  if (error) {
+    loadFile();
+  }, [pdfFile, onError]);
+
+  // Create plugins with the loaded data
+  const plugins = useMemo(() => {
+    if (!pdfData) return null;
+
+    return [
+      createPluginRegistration(LoaderPluginPackage, {
+        loadingOptions: {
+          type: 'buffer' as const,
+          pdfFile: {
+            id: documentName || 'uploaded-pdf',
+            content: pdfData,
+          },
+        },
+      }),
+      createPluginRegistration(ViewportPluginPackage),
+      createPluginRegistration(ScrollPluginPackage),
+      createPluginRegistration(RenderPluginPackage),
+      createPluginRegistration(ZoomPluginPackage, {
+        defaultZoomLevel: 1,
+      }),
+    ];
+  }, [pdfData, documentName]);
+
+  // Handle engine initialization complete
+  useEffect(() => {
+    if (engine && pdfData && !engineLoading) {
+      onLoad?.();
+    }
+  }, [engine, pdfData, engineLoading, onLoad]);
+
+  // Handle engine error
+  useEffect(() => {
+    if (engineError) {
+      onError?.(engineError);
+    }
+  }, [engineError, onError]);
+
+  const handleRetry = () => {
+    setLoadError(null);
+    if (pdfFile) {
+      pdfFile.arrayBuffer().then(buffer => {
+        setPdfData(buffer);
+      }).catch(err => {
+        setLoadError('Falha ao carregar o arquivo PDF.');
+        onError?.(err instanceof Error ? err : new Error(String(err)));
+      });
+    }
+  };
+
+  // Error state
+  if (loadError || engineError) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex flex-col gap-3">
-            <span>{error}</span>
+            <span>{loadError || engineError?.message || 'Erro ao carregar o PDF'}</span>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={initViewer}
+              onClick={handleRetry}
               className="w-fit gap-2"
             >
               <RefreshCw className="w-4 h-4" />
@@ -156,24 +121,47 @@ export const PDFViewerEmbed = ({
     );
   }
 
-  return (
-    <div className="flex-1 relative overflow-hidden">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-          <div className="flex flex-col items-center gap-4">
-            <Skeleton className="w-[300px] h-[400px] rounded-lg" />
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Carregando visualizador de PDF...
-            </p>
-          </div>
+  // Loading state
+  if (engineLoading || !engine || !pdfData || !plugins) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="w-[300px] h-[400px] rounded-lg" />
+          <p className="text-sm text-muted-foreground animate-pulse">
+            {engineLoading ? 'Inicializando motor PDF...' : 'Carregando documento...'}
+          </p>
         </div>
-      )}
-      <div 
-        ref={containerRef} 
-        className="w-full h-full"
-        style={{ minHeight: '100%' }}
-        aria-label={documentName || 'PDF Viewer'}
-      />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 relative overflow-hidden" aria-label={documentName || 'PDF Viewer'}>
+      <EmbedPDF engine={engine} plugins={plugins}>
+        <Viewport
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'hsl(var(--muted) / 0.3)',
+          }}
+        >
+          <Scroller
+            renderPage={({ width, height, pageIndex, scale }) => (
+              <div 
+                style={{ 
+                  width, 
+                  height,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  backgroundColor: 'white',
+                  margin: '8px auto',
+                }}
+              >
+                <RenderLayer pageIndex={pageIndex} scale={scale} />
+              </div>
+            )}
+          />
+        </Viewport>
+      </EmbedPDF>
     </div>
   );
 };
