@@ -35,18 +35,69 @@ const EditorPage = () => {
   }, []);
 
   const handleExport = async (format: string, filename: string) => {
-    // For now, download the original PDF
-    // EmbedPDF annotation export will be handled by the viewer's built-in functionality
-    await new Promise(r => setTimeout(r, 500));
-    if (pdfUrl && format === 'pdf') {
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `${filename}.pdf`;
-      link.click();
+    if (format === 'pdf') {
+      const instance = window.__EMBEDPDF_INSTANCE__;
+      
+      // Try native download method
+      if (instance?.download) {
+        console.log('Using EmbedPDF download method');
+        instance.download();
+        return;
+      }
+      
+      // Try exportPDF method
+      if (instance?.exportPDF) {
+        try {
+          console.log('Using EmbedPDF exportPDF method');
+          const data = await instance.exportPDF();
+          const blob = data instanceof Blob 
+            ? data 
+            : new Blob([data as ArrayBuffer], { type: 'application/pdf' });
+          
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${filename}.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+          return;
+        } catch (err) {
+          console.warn('exportPDF failed:', err);
+        }
+      }
+      
+      // Try getPDF method
+      if (instance?.getPDF) {
+        try {
+          console.log('Using EmbedPDF getPDF method');
+          const blob = await instance.getPDF();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${filename}.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+          return;
+        } catch (err) {
+          console.warn('getPDF failed:', err);
+        }
+      }
+      
+      // Fallback: download original PDF
+      console.warn('EmbedPDF export methods not available, downloading original');
+      if (pdfUrl) {
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `${filename}.pdf`;
+        link.click();
+      }
     }
   };
 
   const handleBack = () => {
+    // Cleanup EmbedPDF instance
+    delete window.__EMBEDPDF_INSTANCE__;
+    delete window.__EMBEDPDF_URL__;
     reset();
     navigate('/');
   };

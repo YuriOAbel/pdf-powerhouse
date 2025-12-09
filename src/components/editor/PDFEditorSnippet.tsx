@@ -10,6 +10,20 @@ interface PDFEditorSnippetProps {
   onError?: (error: Error) => void;
 }
 
+// Declare global types for EmbedPDF instance
+declare global {
+  interface Window {
+    __EMBEDPDF_URL__?: string;
+    __EMBEDPDF_INSTANCE__?: {
+      download?: () => void;
+      exportPDF?: () => Promise<ArrayBuffer | Blob>;
+      getPDF?: () => Promise<Blob>;
+      save?: () => void;
+      [key: string]: unknown;
+    };
+  }
+}
+
 export const PDFEditorSnippet = ({ 
   pdfUrl, 
   onLoad, 
@@ -48,11 +62,16 @@ export const PDFEditorSnippet = ({
           
           const target = document.getElementById('pdf-viewer');
           if (target && window.__EMBEDPDF_URL__) {
-            EmbedPDF.init({
+            window.__EMBEDPDF_INSTANCE__ = EmbedPDF.init({
               type: 'container',
               target: target,
               src: window.__EMBEDPDF_URL__,
             });
+            // Log available methods for debugging
+            console.log('EmbedPDF Instance created:', window.__EMBEDPDF_INSTANCE__);
+            if (window.__EMBEDPDF_INSTANCE__) {
+              console.log('EmbedPDF methods:', Object.keys(window.__EMBEDPDF_INSTANCE__));
+            }
             window.dispatchEvent(new CustomEvent('embedpdf-loaded'));
           }
         `;
