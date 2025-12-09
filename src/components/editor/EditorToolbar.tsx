@@ -92,10 +92,10 @@ export const EditorToolbar = ({ onUndo, onRedo, onSave, onDownload }: EditorTool
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4 px-3 md:px-4 py-2 bg-card border-b border-border"
+      className="flex items-center justify-between gap-2 px-3 py-2 bg-card border-b border-border"
     >
-      {/* Tools - Scrollable on mobile */}
-      <div className="w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+      {/* Tools - Scrollable horizontally */}
+      <div className="flex-1 overflow-x-auto scrollbar-hide">
         <div className="flex items-center gap-1 min-w-max">
           {tools.map((t) => (
             <ToolButton
@@ -110,9 +110,9 @@ export const EditorToolbar = ({ onUndo, onRedo, onSave, onDownload }: EditorTool
         </div>
       </div>
 
-      {/* Center section - Zoom & History */}
-      <div className="flex items-center gap-2">
-        <Separator orientation="vertical" className="h-6 hidden md:block" />
+      {/* Center section - Zoom & History (hidden on mobile) */}
+      <div className="hidden md:flex items-center gap-2">
+        <Separator orientation="vertical" className="h-6" />
         
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -138,7 +138,7 @@ export const EditorToolbar = ({ onUndo, onRedo, onSave, onDownload }: EditorTool
           </Tooltip>
         </div>
 
-        <Separator orientation="vertical" className="h-6 hidden md:block" />
+        <Separator orientation="vertical" className="h-6" />
 
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -159,18 +159,19 @@ export const EditorToolbar = ({ onUndo, onRedo, onSave, onDownload }: EditorTool
             <TooltipContent>Refazer</TooltipContent>
           </Tooltip>
         </div>
-      </div>
 
-      {/* Right section - Actions */}
-      <div className="hidden md:flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onSave} className="gap-2">
-          <Save className="w-4 h-4" />
-          Salvar
-        </Button>
-        <Button size="sm" onClick={onDownload} className="gap-2 bg-gradient-hero hover:opacity-90">
-          <Download className="w-4 h-4" />
-          Baixar
-        </Button>
+        <Separator orientation="vertical" className="h-6" />
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onSave} className="gap-2">
+            <Save className="w-4 h-4" />
+            Salvar
+          </Button>
+          <Button size="sm" onClick={onDownload} className="gap-2 bg-gradient-hero hover:opacity-90">
+            <Download className="w-4 h-4" />
+            Baixar
+          </Button>
+        </div>
       </div>
     </motion.div>
   );

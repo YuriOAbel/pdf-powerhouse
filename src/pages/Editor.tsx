@@ -168,15 +168,14 @@ const EditorPage = () => {
         </div>
       </header>
       
-      <div className="relative">
-        <EditorToolbar onUndo={() => {}} onRedo={() => {}} onSave={() => toast.success('Salvo!')} onDownload={() => setIsExportModalOpen(true)} />
-        <ToolPanel 
-          onImageSelect={handleImageSelect}
-          onAddText={handleAddText}
-          onAddStamp={handleAddStamp}
-          onAddNote={handleAddNote}
-        />
-      </div>
+      <EditorToolbar onUndo={() => {}} onRedo={() => {}} onSave={() => toast.success('Salvo!')} onDownload={() => setIsExportModalOpen(true)} />
+      
+      <ToolPanel 
+        onImageSelect={handleImageSelect}
+        onAddText={handleAddText}
+        onAddStamp={handleAddStamp}
+        onAddNote={handleAddNote}
+      />
       
       <div className="flex-1 flex overflow-hidden">
         <PageThumbnails thumbnails={thumbnails} />
