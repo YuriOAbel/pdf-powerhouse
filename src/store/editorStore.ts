@@ -1,12 +1,37 @@
 import { create } from 'zustand';
 
-export type Tool = 'select' | 'text' | 'highlight' | 'draw' | 'eraser' | 'image' | 'stamp';
+export type Tool = 'select' | 'text' | 'highlight' | 'draw' | 'eraser' | 'image' | 'stamp' | 'note';
 
 export interface PDFPage {
   pageNumber: number;
   width: number;
   height: number;
   thumbnail?: string;
+}
+
+export interface TextSettings {
+  fontFamily: string;
+  fontSize: number;
+  fontColor: string;
+  isBold: boolean;
+  isItalic: boolean;
+}
+
+export interface DrawSettings {
+  strokeWidth: number;
+  strokeColor: string;
+  opacity: number;
+}
+
+export interface StampSettings {
+  type: 'approved' | 'reviewed' | 'paid' | 'custom';
+  customText: string;
+  color: string;
+}
+
+export interface NoteSettings {
+  text: string;
+  color: string;
 }
 
 export interface EditorState {
@@ -24,6 +49,13 @@ export interface EditorState {
   highlightColor: string;
   textColor: string;
   fontSize: number;
+  
+  // Tool settings
+  showToolPanel: boolean;
+  textSettings: TextSettings;
+  drawSettings: DrawSettings;
+  stampSettings: StampSettings;
+  noteSettings: NoteSettings;
   
   // Zoom state
   zoom: number;
@@ -55,8 +87,38 @@ export interface EditorState {
   setIsLoading: (loading: boolean) => void;
   setIsExportModalOpen: (open: boolean) => void;
   setIsProcessing: (processing: boolean) => void;
+  setShowToolPanel: (show: boolean) => void;
+  setTextSettings: (settings: Partial<TextSettings>) => void;
+  setDrawSettings: (settings: Partial<DrawSettings>) => void;
+  setStampSettings: (settings: Partial<StampSettings>) => void;
+  setNoteSettings: (settings: Partial<NoteSettings>) => void;
   reset: () => void;
 }
+
+const initialTextSettings: TextSettings = {
+  fontFamily: 'Arial',
+  fontSize: 16,
+  fontColor: '#000000',
+  isBold: false,
+  isItalic: false,
+};
+
+const initialDrawSettings: DrawSettings = {
+  strokeWidth: 2,
+  strokeColor: '#000000',
+  opacity: 100,
+};
+
+const initialStampSettings: StampSettings = {
+  type: 'approved',
+  customText: '',
+  color: '#ef4444',
+};
+
+const initialNoteSettings: NoteSettings = {
+  text: '',
+  color: '#fbbf24',
+};
 
 const initialState = {
   pdfFile: null,
@@ -70,6 +132,11 @@ const initialState = {
   highlightColor: '#FFEB3B',
   textColor: '#000000',
   fontSize: 16,
+  showToolPanel: false,
+  textSettings: initialTextSettings,
+  drawSettings: initialDrawSettings,
+  stampSettings: initialStampSettings,
+  noteSettings: initialNoteSettings,
   zoom: 100,
   canUndo: false,
   canRedo: false,
@@ -86,7 +153,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   setPages: (pages) => set({ pages }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setTotalPages: (total) => set({ totalPages: total }),
-  setActiveTool: (tool) => set({ activeTool: tool }),
+  setActiveTool: (tool) => set({ 
+    activeTool: tool, 
+    showToolPanel: tool !== 'select' && tool !== 'eraser' 
+  }),
   setBrushColor: (color) => set({ brushColor: color }),
   setBrushSize: (size) => set({ brushSize: size }),
   setHighlightColor: (color) => set({ highlightColor: color }),
@@ -98,5 +168,18 @@ export const useEditorStore = create<EditorState>((set) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   setIsExportModalOpen: (open) => set({ isExportModalOpen: open }),
   setIsProcessing: (processing) => set({ isProcessing: processing }),
+  setShowToolPanel: (show) => set({ showToolPanel: show }),
+  setTextSettings: (settings) => set((state) => ({ 
+    textSettings: { ...state.textSettings, ...settings } 
+  })),
+  setDrawSettings: (settings) => set((state) => ({ 
+    drawSettings: { ...state.drawSettings, ...settings } 
+  })),
+  setStampSettings: (settings) => set((state) => ({ 
+    stampSettings: { ...state.stampSettings, ...settings } 
+  })),
+  setNoteSettings: (settings) => set((state) => ({ 
+    noteSettings: { ...state.noteSettings, ...settings } 
+  })),
   reset: () => set(initialState),
 }));
