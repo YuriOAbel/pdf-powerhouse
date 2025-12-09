@@ -1,146 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fabric } from 'fabric';
-import * as pdfjsLib from 'pdfjs-dist';
-import { ArrowLeft, Sparkles, Download, Save } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { EditorToolbar } from '@/components/editor/EditorToolbar';
-import { PageThumbnails } from '@/components/editor/PageThumbnails';
-import { PDFCanvas } from '@/components/editor/PDFCanvas';
+import { PDFViewerEmbed } from '@/components/editor/PDFViewerEmbed';
 import { ExportModal } from '@/components/editor/ExportModal';
-import { ToolPanel } from '@/components/editor/ToolPanel';
 import { useEditorStore } from '@/store/editorStore';
 import { toast } from 'sonner';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
-
 const EditorPage = () => {
   const navigate = useNavigate();
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
-  const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [pageImages, setPageImages] = useState<string[]>([]);
-  const [pendingAction, setPendingAction] = useState<'text' | 'stamp' | 'note' | null>(null);
   
   const { 
-    pdfUrl, pdfFile, currentPage, setTotalPages, setIsLoading, setIsExportModalOpen, reset,
-    textSettings, stampSettings, noteSettings, setActiveTool
+    pdfUrl, 
+    pdfFile, 
+    setIsLoading, 
+    setIsExportModalOpen, 
+    reset 
   } = useEditorStore();
 
   useEffect(() => {
-    if (!pdfUrl) { navigate('/'); return; }
-    const loadPdf = async () => {
-      setIsLoading(true);
-      try {
-        const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-        setTotalPages(pdf.numPages);
-        const thumbs: string[] = [];
-        const pages: string[] = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const thumbViewport = page.getViewport({ scale: 0.2 });
-          const thumbCanvas = document.createElement('canvas');
-          thumbCanvas.width = thumbViewport.width;
-          thumbCanvas.height = thumbViewport.height;
-          await page.render({ canvasContext: thumbCanvas.getContext('2d')!, viewport: thumbViewport }).promise;
-          thumbs.push(thumbCanvas.toDataURL());
-          const pageViewport = page.getViewport({ scale: 2 });
-          const pageCanvas = document.createElement('canvas');
-          pageCanvas.width = pageViewport.width;
-          pageCanvas.height = pageViewport.height;
-          await page.render({ canvasContext: pageCanvas.getContext('2d')!, viewport: pageViewport }).promise;
-          pages.push(pageCanvas.toDataURL());
-        }
-        setThumbnails(thumbs);
-        setPageImages(pages);
-        setIsLoading(false);
-        toast.success('PDF carregado!', { description: `${pdf.numPages} página(s)` });
-      } catch (error) {
-        toast.error('Erro ao carregar PDF');
-        navigate('/');
-      }
-    };
-    loadPdf();
-  }, [pdfUrl]);
+    if (!pdfUrl) {
+      navigate('/');
+    }
+  }, [pdfUrl, navigate]);
 
-  const handleAddText = () => setPendingAction('text');
-  const handleAddStamp = () => setPendingAction('stamp');
-  const handleAddNote = () => setPendingAction('note');
-
-  const handleImageSelect = (file: File) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      fabric.Image.fromURL(e.target?.result as string, (img) => {
-        img.scaleToWidth(200);
-        img.set({ left: 100, top: 100, cornerStyle: 'circle', transparentCorners: false });
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.renderAll();
-        setActiveTool('select');
-      });
-    };
-    reader.readAsDataURL(file);
+  const handlePdfLoad = () => {
+    setIsLoading(false);
+    toast.success('PDF carregado!');
   };
 
-  const handleCanvasClick = (e: { x: number; y: number }) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas || !pendingAction) return;
-
-    if (pendingAction === 'text') {
-      const text = new fabric.IText('Digite aqui', {
-        left: e.x, top: e.y,
-        fontFamily: textSettings.fontFamily,
-        fontSize: textSettings.fontSize,
-        fill: textSettings.fontColor,
-        fontWeight: textSettings.isBold ? 'bold' : 'normal',
-        fontStyle: textSettings.isItalic ? 'italic' : 'normal',
-      });
-      canvas.add(text);
-      canvas.setActiveObject(text);
-      text.enterEditing();
-    } else if (pendingAction === 'stamp') {
-      const label = stampSettings.type === 'custom' ? stampSettings.customText : 
-        { approved: 'APROVADO', reviewed: 'REVISADO', paid: 'PAGO' }[stampSettings.type];
-      const text = new fabric.Text(label.toUpperCase(), {
-        left: e.x, top: e.y,
-        fontSize: 24, fontWeight: 'bold', fill: stampSettings.color,
-        stroke: stampSettings.color, strokeWidth: 1,
-      });
-      const rect = new fabric.Rect({
-        left: e.x - 10, top: e.y - 5,
-        width: text.width! + 20, height: text.height! + 10,
-        fill: 'transparent', stroke: stampSettings.color, strokeWidth: 2, rx: 4, ry: 4,
-      });
-      const group = new fabric.Group([rect, text], { left: e.x, top: e.y });
-      canvas.add(group);
-    } else if (pendingAction === 'note') {
-      const noteIcon = new fabric.Rect({
-        width: 32, height: 32, fill: noteSettings.color, rx: 6, ry: 6,
-      });
-      const iconText = noteSettings.style === 'sticky' ? '📝' : 
-                       noteSettings.style === 'comment' ? '💬' :
-                       noteSettings.style === 'flag' ? '🚩' : '⭐';
-      const noteEmoji = new fabric.Text(iconText, { fontSize: 18, left: 6, top: 4 });
-      const group = new fabric.Group([noteIcon, noteEmoji], {
-        left: e.x, top: e.y, hasControls: true,
-      });
-      (group as any).noteContent = noteSettings.text;
-      (group as any).noteStyle = noteSettings.style;
-      canvas.add(group);
-      toast.info('Nota adicionada!', { description: noteSettings.text.slice(0, 50) });
-    }
-    
-    canvas.renderAll();
-    setPendingAction(null);
-    setActiveTool('select');
+  const handlePdfError = (error: Error) => {
+    console.error('PDF load error:', error);
+    toast.error('Erro ao carregar PDF');
   };
 
   const handleExport = async (format: string, filename: string) => {
-    await new Promise(r => setTimeout(r, 1500));
+    // For now, download the original PDF
+    // EmbedPDF annotation export will be handled by the viewer's built-in functionality
+    await new Promise(r => setTimeout(r, 500));
     if (pdfUrl && format === 'pdf') {
       const link = document.createElement('a');
       link.href = pdfUrl;
@@ -149,10 +46,20 @@ const EditorPage = () => {
     }
   };
 
+  const handleBack = () => {
+    reset();
+    navigate('/');
+  };
+
+  if (!pdfUrl) {
+    return null;
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <header className="flex items-center gap-4 px-4 py-3 border-b border-border bg-card">
-        <Button variant="ghost" size="icon" onClick={() => { reset(); navigate('/'); }}>
+      {/* Header */}
+      <header className="flex items-center gap-4 px-4 py-3 border-b border-border bg-card shrink-0">
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
@@ -161,35 +68,28 @@ const EditorPage = () => {
           </div>
           <span className="font-semibold hidden sm:block">PDFaid</span>
         </div>
-        <span className="text-sm text-muted-foreground truncate flex-1">{pdfFile?.name || 'Documento'}</span>
-        <div className="flex md:hidden gap-2">
-          <Button variant="outline" size="icon" onClick={() => toast.success('Salvo!')}>
-            <Save className="w-4 h-4" />
-          </Button>
-          <Button size="icon" onClick={() => setIsExportModalOpen(true)} className="bg-gradient-hero">
-            <Download className="w-4 h-4" />
-          </Button>
-        </div>
+        <span className="text-sm text-muted-foreground truncate flex-1">
+          {pdfFile?.name || 'Documento'}
+        </span>
+        <Button 
+          size="sm" 
+          onClick={() => setIsExportModalOpen(true)} 
+          className="bg-gradient-hero gap-2"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Exportar</span>
+        </Button>
       </header>
       
-      <EditorToolbar onUndo={() => {}} onRedo={() => {}} onSave={() => toast.success('Salvo!')} onDownload={() => setIsExportModalOpen(true)} />
-      
-      <ToolPanel 
-        onImageSelect={handleImageSelect}
-        onAddText={handleAddText}
-        onAddStamp={handleAddStamp}
-        onAddNote={handleAddNote}
+      {/* PDF Viewer - Full Height */}
+      <PDFViewerEmbed 
+        pdfUrl={pdfUrl}
+        documentName={pdfFile?.name}
+        onLoad={handlePdfLoad}
+        onError={handlePdfError}
       />
       
-      <div className="flex-1 flex overflow-hidden">
-        <PageThumbnails thumbnails={thumbnails} />
-        <PDFCanvas 
-          pageImage={pageImages[currentPage - 1] || null} 
-          fabricCanvasRef={fabricCanvasRef}
-          onCanvasClick={pendingAction ? handleCanvasClick : undefined}
-          pendingAction={pendingAction}
-        />
-      </div>
+      {/* Export Modal */}
       <ExportModal onExport={handleExport} />
     </div>
   );
