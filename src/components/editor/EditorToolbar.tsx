@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   Type, 
   Pencil, 
@@ -12,7 +12,13 @@ import {
   ZoomOut,
   Maximize,
   EyeOff,
-  MoreHorizontal
+  MoreHorizontal,
+  Image,
+  MessageSquare,
+  Settings2,
+  StickyNote,
+  Download,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -24,22 +30,43 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useAnnotation, useAnnotationCapability } from '@embedpdf/plugin-annotation/react';
+import { useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { useZoomCapability } from '@embedpdf/plugin-zoom/react';
 import { useRedactionCapability } from '@embedpdf/plugin-redaction/react';
+import { usePan } from '@embedpdf/plugin-pan/react';
+import { useExportCapability } from '@embedpdf/plugin-export/react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { RightPanelType } from './PDFEditorNPM';
+import { useEditorStore } from '@/store/editorStore';
 
 type EditorMode = 'select' | 'pan' | 'annotate' | 'redact';
 
-export const EditorToolbar = () => {
+interface EditorToolbarProps {
+  rightPanel: RightPanelType;
+  onTogglePanel: (panel: RightPanelType) => void;
+}
+
+export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps) => {
   const [mode, setMode] = useState<EditorMode>('select');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { pdfFile } = useEditorStore();
   
   // Hooks from EmbedPDF
   const { state: annotationState, provides: annotationProvider } = useAnnotation();
   const { provides: zoomProvider } = useZoomCapability();
   const { provides: redactionProvider } = useRedactionCapability();
+  const { provides: panProvider, isPanning } = usePan();
+  const { provides: exportProvider } = useExportCapability();
 
   const activeTool = annotationState?.activeToolId;
+
+  // Deactivate Pan when selecting a tool
+  const deactivatePan = () => {
+    if (isPanning && panProvider) {
+      panProvider.disablePan();
+    }
+  };
 
   // Tool handlers
   const handleSelectTool = (toolId: string | null) => {
@@ -50,9 +77,42 @@ export const EditorToolbar = () => {
       redactionProvider.endRedaction();
     }
     
+    // Deactivate pan
+    deactivatePan();
+    
     const isActive = activeTool === toolId;
     annotationProvider.setActiveTool(isActive ? null : toolId);
     setMode(toolId ? 'annotate' : 'select');
+  };
+
+  const handlePanMode = () => {
+    // Deactivate annotation tools
+    annotationProvider?.setActiveTool(null);
+    
+    // Deactivate redaction
+    if (redactionProvider?.isMarqueeRedactActive()) {
+      redactionProvider.endRedaction();
+    }
+    
+    // Toggle pan
+    if (panProvider) {
+      if (isPanning) {
+        panProvider.disablePan();
+        setMode('select');
+      } else {
+        panProvider.enablePan();
+        setMode('pan');
+      }
+    }
+  };
+
+  const handleSelectMode = () => {
+    annotationProvider?.setActiveTool(null);
+    if (redactionProvider?.isMarqueeRedactActive()) {
+      redactionProvider.endRedaction();
+    }
+    deactivatePan();
+    setMode('select');
   };
 
   const handleRedactionMode = () => {
@@ -60,6 +120,7 @@ export const EditorToolbar = () => {
     
     // Deactivate annotation tools
     annotationProvider?.setActiveTool(null);
+    deactivatePan();
     
     if (redactionProvider.isMarqueeRedactActive()) {
       redactionProvider.endRedaction();
@@ -74,6 +135,54 @@ export const EditorToolbar = () => {
     if (!redactionProvider) return;
     const task = redactionProvider.commitAllPending();
     await task.toPromise();
+    toast.success('Censuras aplicadas!');
+  };
+
+  // Image stamp handler
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !annotationProvider) return;
+    
+    // Read file as data URL
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageSrc = reader.result as string;
+      
+      // Set stamp tool with image
+      annotationProvider.setToolDefaults('stamp', {
+        imageSrc,
+        imageSize: { width: 150, height: 150 },
+      });
+      annotationProvider.setActiveTool('stamp');
+      setMode('annotate');
+      deactivatePan();
+      
+      toast.success('Clique no PDF para inserir a imagem');
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Export handler
+  const handleExport = async () => {
+    if (!exportProvider) {
+      toast.error('Exportação não disponível');
+      return;
+    }
+    
+    try {
+      exportProvider.download();
+      toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Erro ao exportar PDF');
+    }
   };
 
   // Zoom handlers
@@ -87,15 +196,20 @@ export const EditorToolbar = () => {
 
   return (
     <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border bg-card overflow-x-auto">
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      
       {/* Selection / Pan Mode */}
       <div className="flex items-center gap-0.5">
         <Toggle
-          pressed={mode === 'select' && !activeTool}
-          onPressedChange={() => {
-            annotationProvider?.setActiveTool(null);
-            redactionProvider?.endRedaction();
-            setMode('select');
-          }}
+          pressed={mode === 'select' && !activeTool && !isPanning}
+          onPressedChange={handleSelectMode}
           size="sm"
           aria-label="Selecionar"
           className="h-9 w-9 p-0"
@@ -103,12 +217,8 @@ export const EditorToolbar = () => {
           <MousePointer2 className="h-4 w-4" />
         </Toggle>
         <Toggle
-          pressed={mode === 'pan'}
-          onPressedChange={() => {
-            annotationProvider?.setActiveTool(null);
-            redactionProvider?.endRedaction();
-            setMode('pan');
-          }}
+          pressed={isPanning}
+          onPressedChange={handlePanMode}
           size="sm"
           aria-label="Mover"
           className="h-9 w-9 p-0"
@@ -120,7 +230,7 @@ export const EditorToolbar = () => {
       <Separator orientation="vertical" className="h-6 mx-1" />
 
       {/* Annotation Tools */}
-      <div className="flex items-center gap-0.5">
+      <div className="hidden sm:flex items-center gap-0.5">
         <Toggle
           pressed={isToolActive('freeText')}
           onPressedChange={() => handleSelectTool('freeText')}
@@ -150,12 +260,22 @@ export const EditorToolbar = () => {
         >
           <Highlighter className="h-4 w-4" />
         </Toggle>
+
+        <Toggle
+          pressed={isToolActive('note')}
+          onPressedChange={() => handleSelectTool('note')}
+          size="sm"
+          aria-label="Nota"
+          className="h-9 w-9 p-0"
+        >
+          <StickyNote className="h-4 w-4" />
+        </Toggle>
       </div>
 
-      <Separator orientation="vertical" className="h-6 mx-1" />
+      <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
 
       {/* Shapes */}
-      <div className="flex items-center gap-0.5">
+      <div className="hidden sm:flex items-center gap-0.5">
         <Toggle
           pressed={isToolActive('square')}
           onPressedChange={() => handleSelectTool('square')}
@@ -185,25 +305,73 @@ export const EditorToolbar = () => {
         >
           <ArrowRight className="h-4 w-4" />
         </Toggle>
+
+        <Toggle
+          pressed={isToolActive('stamp')}
+          onPressedChange={handleImageClick}
+          size="sm"
+          aria-label="Imagem"
+          className="h-9 w-9 p-0"
+        >
+          <Image className="h-4 w-4" />
+        </Toggle>
       </div>
 
-      <Separator orientation="vertical" className="h-6 mx-1" />
+      <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
 
       {/* Redaction */}
-      <Toggle
-        pressed={isRedacting}
-        onPressedChange={handleRedactionMode}
-        size="sm"
-        aria-label="Censurar"
-        className={cn(
-          "h-9 w-9 p-0",
-          isRedacting && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      <div className="hidden sm:flex items-center gap-0.5">
+        <Toggle
+          pressed={isRedacting}
+          onPressedChange={handleRedactionMode}
+          size="sm"
+          aria-label="Censurar"
+          className={cn(
+            "h-9 w-9 p-0",
+            isRedacting && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          )}
+        >
+          <EyeOff className="h-4 w-4" />
+        </Toggle>
+        
+        {isRedacting && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleCommitRedactions}
+            className="h-9 gap-1 px-2"
+          >
+            <CheckCircle className="h-4 w-4" />
+            <span className="hidden md:inline">Aplicar</span>
+          </Button>
         )}
-      >
-        <EyeOff className="h-4 w-4" />
-      </Toggle>
+      </div>
 
       <div className="flex-1" />
+
+      {/* Panel toggles */}
+      <div className="hidden md:flex items-center gap-0.5">
+        <Toggle
+          pressed={rightPanel === 'properties'}
+          onPressedChange={() => onTogglePanel('properties')}
+          size="sm"
+          aria-label="Propriedades"
+          className="h-9 w-9 p-0"
+        >
+          <Settings2 className="h-4 w-4" />
+        </Toggle>
+        <Toggle
+          pressed={rightPanel === 'comments'}
+          onPressedChange={() => onTogglePanel('comments')}
+          size="sm"
+          aria-label="Comentários"
+          className="h-9 w-9 p-0"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Toggle>
+      </div>
+
+      <Separator orientation="vertical" className="h-6 mx-1 hidden md:block" />
 
       {/* Zoom Controls */}
       <div className="flex items-center gap-0.5">
@@ -265,6 +433,19 @@ export const EditorToolbar = () => {
         </DropdownMenu>
       </div>
 
+      <Separator orientation="vertical" className="h-6 mx-1" />
+
+      {/* Export */}
+      <Button
+        variant="default"
+        size="sm"
+        onClick={handleExport}
+        className="h-9 gap-1.5"
+      >
+        <Download className="h-4 w-4" />
+        <span className="hidden sm:inline">Exportar</span>
+      </Button>
+
       {/* More Options (Mobile) */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -290,6 +471,10 @@ export const EditorToolbar = () => {
             <Highlighter className="h-4 w-4 mr-2" />
             Destacar
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleSelectTool('note')}>
+            <StickyNote className="h-4 w-4 mr-2" />
+            Nota
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleSelectTool('square')}>
             <Square className="h-4 w-4 mr-2" />
@@ -303,6 +488,10 @@ export const EditorToolbar = () => {
             <ArrowRight className="h-4 w-4 mr-2" />
             Seta
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleImageClick}>
+            <Image className="h-4 w-4 mr-2" />
+            Imagem
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleRedactionMode}>
             <EyeOff className="h-4 w-4 mr-2" />
@@ -310,9 +499,19 @@ export const EditorToolbar = () => {
           </DropdownMenuItem>
           {isRedacting && (
             <DropdownMenuItem onClick={handleCommitRedactions}>
+              <CheckCircle className="h-4 w-4 mr-2" />
               Aplicar censuras
             </DropdownMenuItem>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => onTogglePanel('properties')}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Propriedades
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onTogglePanel('comments')}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Comentários
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

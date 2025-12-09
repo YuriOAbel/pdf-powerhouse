@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { usePdfiumEngine } from '@embedpdf/engines/react';
 import { EmbedPDF } from '@embedpdf/core/react';
 import { createPluginRegistration } from '@embedpdf/core';
@@ -10,7 +10,7 @@ import { ZoomPluginPackage, ZoomMode } from '@embedpdf/plugin-zoom/react';
 import { ExportPluginPackage } from '@embedpdf/plugin-export/react';
 import { AnnotationLayer, AnnotationPluginPackage } from '@embedpdf/plugin-annotation/react';
 import { RedactionLayer, RedactionPluginPackage } from '@embedpdf/plugin-redaction/react';
-import { InteractionManagerPluginPackage } from '@embedpdf/plugin-interaction-manager/react';
+import { InteractionManagerPluginPackage, GlobalPointerProvider, PagePointerProvider } from '@embedpdf/plugin-interaction-manager/react';
 import { PanPluginPackage } from '@embedpdf/plugin-pan/react';
 import { SelectionPluginPackage } from '@embedpdf/plugin-selection/react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,8 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EditorToolbar } from './EditorToolbar';
+import { PropertiesPanel } from './PropertiesPanel';
+import { CommentsPanel } from './CommentsPanel';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -25,12 +27,15 @@ interface PDFEditorNPMProps {
   onError?: (error: Error) => void;
 }
 
+export type RightPanelType = 'none' | 'properties' | 'comments';
+
 export const PDFEditorNPM = ({ 
   pdfUrl, 
   onLoad, 
   onError 
 }: PDFEditorNPMProps) => {
   const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
+  const [rightPanel, setRightPanel] = useState<RightPanelType>('none');
 
   // Register all required plugins
   const plugins = useMemo(() => [
@@ -71,6 +76,10 @@ export const PDFEditorNPM = ({
 
   const handleRetry = () => {
     window.location.reload();
+  };
+
+  const togglePanel = (panel: RightPanelType) => {
+    setRightPanel(current => current === panel ? 'none' : panel);
   };
 
   // Engine error
@@ -120,47 +129,70 @@ export const PDFEditorNPM = ({
       {({ pluginsReady }) => (
         <div className="flex flex-col h-full flex-1 overflow-hidden">
           {/* Custom Toolbar */}
-          <EditorToolbar />
+          <EditorToolbar 
+            rightPanel={rightPanel}
+            onTogglePanel={togglePanel}
+          />
           
-          {/* PDF Viewport */}
-          {!pluginsReady ? (
-            <div className="flex-1 flex items-center justify-center bg-muted/30">
-              <div className="flex flex-col items-center gap-4">
-                <Skeleton className="w-[300px] h-[400px] rounded-lg" />
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  Carregando documento...
-                </p>
+          {/* Main Content Area */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* PDF Viewport */}
+            {!pluginsReady ? (
+              <div className="flex-1 flex items-center justify-center bg-muted/30">
+                <div className="flex flex-col items-center gap-4">
+                  <Skeleton className="w-[300px] h-[400px] rounded-lg" />
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    Carregando documento...
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <Viewport 
-              className="flex-1 bg-muted/50"
-              style={{ minHeight: 0 }}
-            >
-              <Scroller
-                renderPage={({ pageIndex, scale, width, height, rotation }) => (
-                  <div 
-                    style={{ width, height, position: 'relative' }}
-                    className="shadow-lg bg-white"
-                  >
-                    <RenderLayer pageIndex={pageIndex} />
-                    <AnnotationLayer 
-                      pageIndex={pageIndex} 
-                      scale={scale}
-                      pageWidth={width}
-                      pageHeight={height}
-                      rotation={rotation}
-                    />
-                    <RedactionLayer 
-                      pageIndex={pageIndex} 
-                      scale={scale} 
-                      rotation={rotation} 
-                    />
-                  </div>
-                )}
-              />
-            </Viewport>
-          )}
+            ) : (
+              <GlobalPointerProvider>
+                <Viewport 
+                  className="flex-1 bg-muted/50"
+                  style={{ minHeight: 0 }}
+                >
+                  <Scroller
+                    renderPage={({ pageIndex, scale, width, height, rotation }) => (
+                      <PagePointerProvider
+                        pageIndex={pageIndex}
+                        pageWidth={width}
+                        pageHeight={height}
+                        rotation={rotation}
+                        scale={scale}
+                      >
+                        <div 
+                          style={{ width, height, position: 'relative' }}
+                          className="shadow-lg bg-white"
+                        >
+                          <RenderLayer 
+                            pageIndex={pageIndex} 
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <AnnotationLayer 
+                            pageIndex={pageIndex} 
+                            scale={scale}
+                            pageWidth={width}
+                            pageHeight={height}
+                            rotation={rotation}
+                          />
+                          <RedactionLayer 
+                            pageIndex={pageIndex} 
+                            scale={scale} 
+                            rotation={rotation} 
+                          />
+                        </div>
+                      </PagePointerProvider>
+                    )}
+                  />
+                </Viewport>
+              </GlobalPointerProvider>
+            )}
+            
+            {/* Right Panel */}
+            {rightPanel === 'properties' && <PropertiesPanel onClose={() => setRightPanel('none')} />}
+            {rightPanel === 'comments' && <CommentsPanel onClose={() => setRightPanel('none')} />}
+          </div>
         </div>
       )}
     </EmbedPDF>
