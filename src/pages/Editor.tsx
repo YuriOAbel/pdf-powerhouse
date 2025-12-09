@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PDFViewerEmbed } from '@/components/editor/PDFViewerEmbed';
+import { PDFEditorSnippet } from '@/components/editor/PDFEditorSnippet';
 import { ExportModal } from '@/components/editor/ExportModal';
 import { useEditorStore } from '@/store/editorStore';
 import { toast } from 'sonner';
@@ -81,11 +81,10 @@ const EditorPage = () => {
         </Button>
       </header>
       
-      {/* PDF Viewer - Full Height */}
-      {pdfFile && (
-        <PDFViewerEmbed 
-          pdfFile={pdfFile}
-          documentName={pdfFile.name}
+      {/* PDF Editor with Full Toolbar */}
+      {pdfUrl && (
+        <PDFEditorSnippet 
+          pdfUrl={pdfUrl}
           onLoad={handlePdfLoad}
           onError={handlePdfError}
         />
