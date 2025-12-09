@@ -1,0 +1,168 @@
+import { useMemo, useCallback } from 'react';
+import { usePdfiumEngine } from '@embedpdf/engines/react';
+import { EmbedPDF } from '@embedpdf/core/react';
+import { createPluginRegistration } from '@embedpdf/core';
+import { Viewport, ViewportPluginPackage } from '@embedpdf/plugin-viewport/react';
+import { Scroller, ScrollPluginPackage } from '@embedpdf/plugin-scroll/react';
+import { LoaderPluginPackage } from '@embedpdf/plugin-loader/react';
+import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/react';
+import { ZoomPluginPackage, ZoomMode } from '@embedpdf/plugin-zoom/react';
+import { ExportPluginPackage } from '@embedpdf/plugin-export/react';
+import { AnnotationLayer, AnnotationPluginPackage } from '@embedpdf/plugin-annotation/react';
+import { RedactionLayer, RedactionPluginPackage } from '@embedpdf/plugin-redaction/react';
+import { InteractionManagerPluginPackage } from '@embedpdf/plugin-interaction-manager/react';
+import { PanPluginPackage } from '@embedpdf/plugin-pan/react';
+import { SelectionPluginPackage } from '@embedpdf/plugin-selection/react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { EditorToolbar } from './EditorToolbar';
+
+interface PDFEditorNPMProps {
+  pdfUrl: string;
+  onLoad?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export const PDFEditorNPM = ({ 
+  pdfUrl, 
+  onLoad, 
+  onError 
+}: PDFEditorNPMProps) => {
+  const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
+
+  // Register all required plugins
+  const plugins = useMemo(() => [
+    createPluginRegistration(LoaderPluginPackage, {
+      loadingOptions: {
+        type: 'url',
+        pdfFile: { id: 'user-pdf', url: pdfUrl },
+      },
+    }),
+    createPluginRegistration(ViewportPluginPackage, { 
+      viewportGap: 10 
+    }),
+    createPluginRegistration(ScrollPluginPackage),
+    createPluginRegistration(RenderPluginPackage),
+    createPluginRegistration(ZoomPluginPackage, { 
+      defaultZoomLevel: ZoomMode.FitWidth,
+      minZoom: 0.25,
+      maxZoom: 4,
+    }),
+    createPluginRegistration(InteractionManagerPluginPackage),
+    createPluginRegistration(PanPluginPackage),
+    createPluginRegistration(SelectionPluginPackage),
+    createPluginRegistration(AnnotationPluginPackage, {
+      autoCommit: true,
+      deactivateToolAfterCreate: false,
+      selectAfterCreate: true,
+    }),
+    createPluginRegistration(RedactionPluginPackage, {
+      drawBlackBoxes: true,
+    }),
+    createPluginRegistration(ExportPluginPackage),
+  ], [pdfUrl]);
+
+  const handleInitialized = useCallback(async () => {
+    console.log('EmbedPDF initialized with plugins');
+    onLoad?.();
+  }, [onLoad]);
+
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  // Engine error
+  if (engineError) {
+    onError?.(new Error(engineError.message));
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex flex-col gap-3">
+            <span>Erro ao inicializar o motor PDF: {engineError.message}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRetry}
+              className="w-fit gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Tentar novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Engine loading
+  if (engineLoading || !engine) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="w-[300px] h-[400px] rounded-lg" />
+          <p className="text-sm text-muted-foreground animate-pulse">
+            Inicializando motor PDF...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <EmbedPDF 
+      engine={engine} 
+      plugins={plugins}
+      onInitialized={handleInitialized}
+    >
+      {({ pluginsReady }) => (
+        <div className="flex flex-col h-full flex-1 overflow-hidden">
+          {/* Custom Toolbar */}
+          <EditorToolbar />
+          
+          {/* PDF Viewport */}
+          {!pluginsReady ? (
+            <div className="flex-1 flex items-center justify-center bg-muted/30">
+              <div className="flex flex-col items-center gap-4">
+                <Skeleton className="w-[300px] h-[400px] rounded-lg" />
+                <p className="text-sm text-muted-foreground animate-pulse">
+                  Carregando documento...
+                </p>
+              </div>
+            </div>
+          ) : (
+            <Viewport 
+              className="flex-1 bg-muted/50"
+              style={{ minHeight: 0 }}
+            >
+              <Scroller
+                renderPage={({ pageIndex, scale, width, height, rotation }) => (
+                  <div 
+                    style={{ width, height, position: 'relative' }}
+                    className="shadow-lg bg-white"
+                  >
+                    <RenderLayer pageIndex={pageIndex} />
+                    <AnnotationLayer 
+                      pageIndex={pageIndex} 
+                      scale={scale}
+                      pageWidth={width}
+                      pageHeight={height}
+                      rotation={rotation}
+                    />
+                    <RedactionLayer 
+                      pageIndex={pageIndex} 
+                      scale={scale} 
+                      rotation={rotation} 
+                    />
+                  </div>
+                )}
+              />
+            </Viewport>
+          )}
+        </div>
+      )}
+    </EmbedPDF>
+  );
+};
