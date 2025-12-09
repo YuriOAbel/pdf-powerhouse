@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
