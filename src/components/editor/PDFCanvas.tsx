@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import * as fabric from 'fabric';
+import { useEffect, useRef } from 'react';
+import { Canvas, FabricImage } from 'fabric';
 import { useEditorStore } from '@/store/editorStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 
 interface PDFCanvasProps {
   pageImage: string | null;
-  fabricCanvasRef: React.MutableRefObject<fabric.Canvas | null>;
+  fabricCanvasRef: React.MutableRefObject<Canvas | null>;
 }
 
 export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
@@ -28,14 +28,16 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
   useEffect(() => {
     if (!canvasRef.current || fabricCanvasRef.current) return;
 
-    const canvas = new fabric.Canvas(canvasRef.current, {
+    const canvas = new Canvas(canvasRef.current, {
       width: 800,
       height: 600,
       backgroundColor: '#ffffff',
     });
 
-    canvas.freeDrawingBrush.color = brushColor;
-    canvas.freeDrawingBrush.width = brushSize;
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = brushColor;
+      canvas.freeDrawingBrush.width = brushSize;
+    }
     fabricCanvasRef.current = canvas;
 
     canvas.on('object:added', () => setCanUndo(true));
@@ -50,11 +52,12 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !pageImage) return;
 
-    fabric.Image.fromURL(pageImage, (img) => {
+    FabricImage.fromURL(pageImage).then((img) => {
       if (!img || !canvas) return;
       const scale = Math.min(800 / (img.width || 800), 600 / (img.height || 600)) * (zoom / 100);
       img.scaleToWidth((img.width || 800) * scale);
-      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+      canvas.backgroundImage = img;
+      canvas.renderAll();
     });
   }, [pageImage, zoom]);
 
