@@ -7,68 +7,60 @@ import { motion } from 'framer-motion';
 interface PDFCanvasProps {
   pageImage: string | null;
   fabricCanvasRef: React.MutableRefObject<fabric.Canvas | null>;
+  onCanvasClick?: (point: { x: number; y: number }) => void;
+  pendingAction?: 'text' | 'stamp' | 'note' | null;
 }
 
-export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
+export const PDFCanvas = ({ pageImage, fabricCanvasRef, onCanvasClick, pendingAction }: PDFCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const { 
     activeTool, 
-    brushColor, 
-    brushSize, 
+    drawSettings,
     highlightColor,
     zoom,
     isLoading,
     setCanUndo,
   } = useEditorStore();
 
-  // Inicializar canvas quando a imagem da página estiver disponível
   useEffect(() => {
     if (!canvasRef.current || !pageImage) return;
-    
-    // Se já existe um canvas, limpar para recriar com novo tamanho
     if (fabricCanvasRef.current) {
       fabricCanvasRef.current.dispose();
       fabricCanvasRef.current = null;
     }
 
-    // Carregar imagem primeiro para obter dimensões
     fabric.Image.fromURL(pageImage, (img) => {
       if (!img || !canvasRef.current) return;
-      
       const imgWidth = img.width || 800;
       const imgHeight = img.height || 600;
-      
-      // Calcular dimensões do canvas baseado no zoom
       const scale = (zoom / 100);
       const canvasWidth = imgWidth * scale;
       const canvasHeight = imgHeight * scale;
       
-      // Criar canvas com dimensões da imagem
       const canvas = new fabric.Canvas(canvasRef.current, {
         width: canvasWidth,
         height: canvasHeight,
         backgroundColor: '#ffffff',
       });
 
-      // Configurar imagem como fundo
       img.scaleToWidth(canvasWidth);
-      img.set({
-        left: 0,
-        top: 0,
-        originX: 'left',
-        originY: 'top',
-      });
-      
+      img.set({ left: 0, top: 0, originX: 'left', originY: 'top' });
       canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
 
-      // Configurar brush
       if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = brushColor;
-        canvas.freeDrawingBrush.width = brushSize;
+        canvas.freeDrawingBrush.color = drawSettings.strokeColor;
+        canvas.freeDrawingBrush.width = drawSettings.strokeWidth;
       }
       
+      canvas.on('mouse:down', (opt) => {
+        if (onCanvasClick && pendingAction) {
+          const pointer = canvas.getPointer(opt.e);
+          onCanvasClick({ x: pointer.x, y: pointer.y });
+        }
+      });
+
       fabricCanvasRef.current = canvas;
       canvas.on('object:added', () => setCanUndo(true));
     });
@@ -81,7 +73,6 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
     };
   }, [pageImage, zoom]);
 
-  // Atualizar ferramentas
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -94,15 +85,16 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
         canvas.freeDrawingBrush.color = highlightColor + '80';
         canvas.freeDrawingBrush.width = 20;
       } else {
-        canvas.freeDrawingBrush.color = brushColor;
-        canvas.freeDrawingBrush.width = brushSize;
+        canvas.freeDrawingBrush.color = drawSettings.strokeColor;
+        canvas.freeDrawingBrush.width = drawSettings.strokeWidth;
+        (canvas.freeDrawingBrush as any).opacity = drawSettings.opacity / 100;
       }
     }
-  }, [activeTool, brushColor, brushSize, highlightColor]);
+  }, [activeTool, drawSettings, highlightColor]);
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
         <Skeleton className="w-full max-w-2xl aspect-[3/4] rounded-xl" />
       </div>
     );
@@ -113,8 +105,15 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       ref={containerRef}
-      className="flex-1 flex items-center justify-center p-8 overflow-auto bg-muted/30"
+      className={`flex-1 flex items-center justify-center p-4 md:p-8 overflow-auto bg-muted/30 ${
+        pendingAction ? 'cursor-crosshair' : ''
+      }`}
     >
+      {pendingAction && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium z-30 shadow-lg">
+          Toque no PDF para inserir
+        </div>
+      )}
       <div className="pdf-canvas-container shadow-xl rounded-lg overflow-hidden">
         <canvas ref={canvasRef} />
       </div>
