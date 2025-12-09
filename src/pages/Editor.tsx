@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,15 +24,15 @@ const EditorPage = () => {
     }
   }, [pdfUrl, navigate]);
 
-  const handlePdfLoad = () => {
+  const handlePdfLoad = useCallback(() => {
     setIsLoading(false);
     toast.success('PDF carregado!');
-  };
+  }, [setIsLoading]);
 
-  const handlePdfError = (error: Error) => {
+  const handlePdfError = useCallback((error: Error) => {
     console.error('PDF load error:', error);
     toast.error('Erro ao carregar PDF');
-  };
+  }, []);
 
   const handleExport = async (format: string, filename: string) => {
     // For now, download the original PDF
