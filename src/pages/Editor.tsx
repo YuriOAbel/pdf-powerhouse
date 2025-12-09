@@ -119,13 +119,17 @@ const EditorPage = () => {
       canvas.add(group);
     } else if (pendingAction === 'note') {
       const noteIcon = new fabric.Rect({
-        width: 30, height: 30, fill: noteSettings.color, rx: 4, ry: 4,
+        width: 32, height: 32, fill: noteSettings.color, rx: 6, ry: 6,
       });
-      const noteText = new fabric.Text('📝', { fontSize: 16, left: 5, top: 3 });
-      const group = new fabric.Group([noteIcon, noteText], {
+      const iconText = noteSettings.style === 'sticky' ? '📝' : 
+                       noteSettings.style === 'comment' ? '💬' :
+                       noteSettings.style === 'flag' ? '🚩' : '⭐';
+      const noteEmoji = new fabric.Text(iconText, { fontSize: 18, left: 6, top: 4 });
+      const group = new fabric.Group([noteIcon, noteEmoji], {
         left: e.x, top: e.y, hasControls: true,
       });
       (group as any).noteContent = noteSettings.text;
+      (group as any).noteStyle = noteSettings.style;
       canvas.add(group);
       toast.info('Nota adicionada!', { description: noteSettings.text.slice(0, 50) });
     }

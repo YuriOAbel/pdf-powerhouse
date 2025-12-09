@@ -58,46 +58,44 @@ export const ToolPanel = ({ onImageSelect, onAddText, onAddStamp, onAddNote }: T
 
   return (
     <AnimatePresence mode="wait">
-      {/* Backdrop */}
+      {/* Backdrop - tap to close */}
       <motion.div
         key="backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/40 z-[100]"
+        className="fixed inset-0 bg-black/20 z-[100]"
         onClick={() => setShowToolPanel(false)}
       />
       
-      {/* Panel - Bottom sheet on mobile, centered modal on desktop */}
+      {/* Floating Lateral Panel - Side-by-side style */}
       <motion.div
         key="panel"
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 z-[101] bg-card border-t border-border rounded-t-2xl shadow-2xl max-h-[80vh] overflow-hidden
-                   md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:max-h-[600px] md:w-96 md:border"
+        initial={{ opacity: 0, x: -20, scale: 0.95 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -20, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+        className="fixed z-[101] bg-card border border-border rounded-xl shadow-2xl overflow-hidden
+                   left-2 right-2 top-[140px] max-w-[70vw] mx-auto
+                   sm:left-4 sm:right-auto sm:top-[130px] sm:max-w-[320px] sm:mx-0
+                   md:left-[80px] md:top-[120px] md:max-w-[360px]"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle for mobile */}
-        <div className="flex justify-center pt-3 pb-1 md:hidden">
-          <div className="w-10 h-1 bg-muted-foreground/40 rounded-full" />
-        </div>
-        
         {/* Header */}
-        <div className="sticky top-0 bg-card flex items-center justify-between px-4 py-3 border-b border-border z-10">
-          <h3 className="font-semibold text-lg text-foreground">{getPanelTitle(activeTool)}</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+          <h3 className="font-semibold text-base text-foreground">{getPanelTitle(activeTool)}</h3>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowToolPanel(false)}
-            className="h-9 w-9 rounded-full"
+            className="h-8 w-8 rounded-full hover:bg-muted"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
         
-        {/* Content - Scrollable */}
-        <div className="p-4 overflow-y-auto max-h-[calc(80vh-80px)] md:max-h-[calc(600px-80px)]">
+        {/* Content */}
+        <div className="p-4 overflow-y-auto max-h-[60vh] sm:max-h-[70vh]">
           {renderPanel()}
         </div>
       </motion.div>
