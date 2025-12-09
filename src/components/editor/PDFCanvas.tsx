@@ -18,49 +18,71 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
     brushColor, 
     brushSize, 
     highlightColor,
-    textColor,
-    fontSize,
     zoom,
     isLoading,
     setCanUndo,
   } = useEditorStore();
 
+  // Inicializar canvas quando a imagem da página estiver disponível
   useEffect(() => {
-    if (!canvasRef.current || fabricCanvasRef.current) return;
-
-    const canvas = new Canvas(canvasRef.current, {
-      width: 800,
-      height: 600,
-      backgroundColor: '#ffffff',
-    });
-
-    if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.color = brushColor;
-      canvas.freeDrawingBrush.width = brushSize;
-    }
-    fabricCanvasRef.current = canvas;
-
-    canvas.on('object:added', () => setCanUndo(true));
-
-    return () => {
-      canvas.dispose();
+    if (!canvasRef.current || !pageImage) return;
+    
+    // Se já existe um canvas, limpar para recriar com novo tamanho
+    if (fabricCanvasRef.current) {
+      fabricCanvasRef.current.dispose();
       fabricCanvasRef.current = null;
-    };
-  }, []);
+    }
 
-  useEffect(() => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas || !pageImage) return;
-
+    // Carregar imagem primeiro para obter dimensões
     FabricImage.fromURL(pageImage).then((img) => {
-      if (!img || !canvas) return;
-      const scale = Math.min(800 / (img.width || 800), 600 / (img.height || 600)) * (zoom / 100);
-      img.scaleToWidth((img.width || 800) * scale);
+      if (!img || !canvasRef.current) return;
+      
+      const imgWidth = img.width || 800;
+      const imgHeight = img.height || 600;
+      
+      // Calcular dimensões do canvas baseado no zoom
+      const scale = (zoom / 100);
+      const canvasWidth = imgWidth * scale;
+      const canvasHeight = imgHeight * scale;
+      
+      // Criar canvas com dimensões da imagem
+      const canvas = new Canvas(canvasRef.current, {
+        width: canvasWidth,
+        height: canvasHeight,
+        backgroundColor: '#ffffff',
+      });
+
+      // Configurar imagem como fundo
+      img.scaleToWidth(canvasWidth);
+      img.set({
+        left: 0,
+        top: 0,
+        originX: 'left',
+        originY: 'top',
+      });
+      
       canvas.backgroundImage = img;
       canvas.renderAll();
+
+      // Configurar brush
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = brushColor;
+        canvas.freeDrawingBrush.width = brushSize;
+      }
+      
+      fabricCanvasRef.current = canvas;
+      canvas.on('object:added', () => setCanUndo(true));
     });
+
+    return () => {
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
+    };
   }, [pageImage, zoom]);
 
+  // Atualizar ferramentas
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -68,12 +90,14 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
     canvas.isDrawingMode = activeTool === 'draw' || activeTool === 'highlight';
     canvas.selection = activeTool === 'select';
 
-    if (activeTool === 'highlight') {
-      canvas.freeDrawingBrush.color = highlightColor + '80';
-      canvas.freeDrawingBrush.width = 20;
-    } else {
-      canvas.freeDrawingBrush.color = brushColor;
-      canvas.freeDrawingBrush.width = brushSize;
+    if (canvas.freeDrawingBrush) {
+      if (activeTool === 'highlight') {
+        canvas.freeDrawingBrush.color = highlightColor + '80';
+        canvas.freeDrawingBrush.width = 20;
+      } else {
+        canvas.freeDrawingBrush.color = brushColor;
+        canvas.freeDrawingBrush.width = brushSize;
+      }
     }
   }, [activeTool, brushColor, brushSize, highlightColor]);
 
@@ -92,8 +116,8 @@ export const PDFCanvas = ({ pageImage, fabricCanvasRef }: PDFCanvasProps) => {
       ref={containerRef}
       className="flex-1 flex items-center justify-center p-8 overflow-auto bg-muted/30"
     >
-      <div className="pdf-canvas-container shadow-xl">
-        <canvas ref={canvasRef} className="pdf-page" />
+      <div className="pdf-canvas-container shadow-xl rounded-lg overflow-hidden">
+        <canvas ref={canvasRef} />
       </div>
     </motion.div>
   );
