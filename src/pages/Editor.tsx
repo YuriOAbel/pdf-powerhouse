@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as fabric from 'fabric';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -11,7 +11,11 @@ import { ExportModal } from '@/components/editor/ExportModal';
 import { useEditorStore } from '@/store/editorStore';
 import { toast } from 'sonner';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configurar worker do PDF.js usando import.meta.url (compatível com Vite)
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
 
 const EditorPage = () => {
   const navigate = useNavigate();
@@ -53,7 +57,10 @@ const EditorPage = () => {
         setIsLoading(false);
         toast.success('PDF carregado!', { description: `${pdf.numPages} página(s)` });
       } catch (error) {
-        toast.error('Erro ao carregar PDF');
+        console.error('Erro ao carregar PDF:', error);
+        toast.error('Erro ao carregar PDF', {
+          description: error instanceof Error ? error.message : 'Arquivo inválido ou corrompido'
+        });
         navigate('/');
       }
     };
