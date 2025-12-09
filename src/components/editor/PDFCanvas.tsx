@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { useEditorStore } from '@/store/editorStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
