@@ -79,6 +79,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
 
   // Undo/Redo handlers (definidas antes de useKeyboardShortcuts)
   const handleUndo = () => {
+    console.debug('[EditorToolbar] Undo button clicked. Can undo:', canUndo);
     if (!canUndo) {
       toast.info('Nada para desfazer');
       return;
@@ -88,6 +89,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
   };
 
   const handleRedo = () => {
+    console.debug('[EditorToolbar] Redo button clicked. Can redo:', canRedo);
     if (!canRedo) {
       toast.info('Nada para refazer');
       return;
