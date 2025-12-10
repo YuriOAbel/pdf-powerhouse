@@ -18,7 +18,11 @@ import {
   Settings2,
   StickyNote,
   Download,
-  CheckCircle
+  CheckCircle,
+  Undo2,
+  Redo2,
+  Underline,
+  Strikethrough
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +34,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { useZoomCapability } from '@embedpdf/plugin-zoom/react';
 import { useRedactionCapability } from '@embedpdf/plugin-redaction/react';
@@ -51,6 +56,10 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
   const [mode, setMode] = useState<EditorMode>('select');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { pdfFile } = useEditorStore();
+  
+  // Undo/Redo history state (basic implementation)
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
   
   // Hooks from EmbedPDF
   const { state: annotationState, provides: annotationProvider } = useAnnotation();
@@ -169,6 +178,17 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
     e.target.value = '';
   };
 
+  // Undo/Redo handlers (basic implementation - annotation-based)
+  const handleUndo = () => {
+    // Note: EmbedPDF doesn't expose a built-in undo/redo API
+    // This is a placeholder for future implementation
+    toast.info('Funcionalidade de desfazer em desenvolvimento');
+  };
+
+  const handleRedo = () => {
+    toast.info('Funcionalidade de refazer em desenvolvimento');
+  };
+
   // Export handler
   const handleExport = async () => {
     if (!exportProvider) {
@@ -195,325 +215,492 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
   const isRedacting = mode === 'redact';
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border bg-card overflow-x-auto">
-      {/* Hidden file input for image upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-      
-      {/* Selection / Pan Mode */}
-      <div className="flex items-center gap-0.5">
-        <Toggle
-          pressed={mode === 'select' && !activeTool && !isPanning}
-          onPressedChange={handleSelectMode}
-          size="sm"
-          aria-label="Selecionar"
-          className="h-9 w-9 p-0"
-        >
-          <MousePointer2 className="h-4 w-4" />
-        </Toggle>
-        <Toggle
-          pressed={isPanning}
-          onPressedChange={handlePanMode}
-          size="sm"
-          aria-label="Mover"
-          className="h-9 w-9 p-0"
-        >
-          <Hand className="h-4 w-4" />
-        </Toggle>
-      </div>
-
-      <Separator orientation="vertical" className="h-6 mx-1" />
-
-      {/* Annotation Tools */}
-      <div className="hidden sm:flex items-center gap-0.5">
-        <Toggle
-          pressed={isToolActive('freeText')}
-          onPressedChange={() => handleSelectTool('freeText')}
-          size="sm"
-          aria-label="Texto"
-          className="h-9 w-9 p-0"
-        >
-          <Type className="h-4 w-4" />
-        </Toggle>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border bg-card overflow-x-auto">
+        {/* Hidden file input for image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
         
-        <Toggle
-          pressed={isToolActive('ink')}
-          onPressedChange={() => handleSelectTool('ink')}
-          size="sm"
-          aria-label="Desenho livre"
-          className="h-9 w-9 p-0"
-        >
-          <Pencil className="h-4 w-4" />
-        </Toggle>
+        {/* Undo / Redo */}
+        <div className="hidden sm:flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUndo}
+                className="h-9 w-9 p-0"
+                disabled
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Desfazer</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRedo}
+                className="h-9 w-9 p-0"
+                disabled
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Refazer</p></TooltipContent>
+          </Tooltip>
+        </div>
 
-        <Toggle
-          pressed={isToolActive('highlight')}
-          onPressedChange={() => handleSelectTool('highlight')}
-          size="sm"
-          aria-label="Destacar"
-          className="h-9 w-9 p-0"
-        >
-          <Highlighter className="h-4 w-4" />
-        </Toggle>
+        <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
 
-        <Toggle
-          pressed={isToolActive('note')}
-          onPressedChange={() => handleSelectTool('note')}
-          size="sm"
-          aria-label="Nota"
-          className="h-9 w-9 p-0"
-        >
-          <StickyNote className="h-4 w-4" />
-        </Toggle>
-      </div>
+        {/* Selection / Pan Mode */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={mode === 'select' && !activeTool && !isPanning}
+                onPressedChange={handleSelectMode}
+                size="sm"
+                aria-label="Selecionar"
+                className="h-9 w-9 p-0"
+              >
+                <MousePointer2 className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Selecionar</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isPanning}
+                onPressedChange={handlePanMode}
+                size="sm"
+                aria-label="Mover"
+                className="h-9 w-9 p-0"
+              >
+                <Hand className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Mover</p></TooltipContent>
+          </Tooltip>
+        </div>
 
-      <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+        <Separator orientation="vertical" className="h-6 mx-1" />
 
-      {/* Shapes */}
-      <div className="hidden sm:flex items-center gap-0.5">
-        <Toggle
-          pressed={isToolActive('square')}
-          onPressedChange={() => handleSelectTool('square')}
-          size="sm"
-          aria-label="Retângulo"
-          className="h-9 w-9 p-0"
-        >
-          <Square className="h-4 w-4" />
-        </Toggle>
-        
-        <Toggle
-          pressed={isToolActive('circle')}
-          onPressedChange={() => handleSelectTool('circle')}
-          size="sm"
-          aria-label="Elipse"
-          className="h-9 w-9 p-0"
-        >
-          <Circle className="h-4 w-4" />
-        </Toggle>
+        {/* Annotation Tools */}
+        <div className="hidden sm:flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('freeText')}
+                onPressedChange={() => handleSelectTool('freeText')}
+                size="sm"
+                aria-label="Texto"
+                className="h-9 w-9 p-0"
+              >
+                <Type className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Texto</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('ink')}
+                onPressedChange={() => handleSelectTool('ink')}
+                size="sm"
+                aria-label="Desenho livre"
+                className="h-9 w-9 p-0"
+              >
+                <Pencil className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Desenho livre</p></TooltipContent>
+          </Tooltip>
 
-        <Toggle
-          pressed={isToolActive('lineArrow')}
-          onPressedChange={() => handleSelectTool('lineArrow')}
-          size="sm"
-          aria-label="Seta"
-          className="h-9 w-9 p-0"
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Toggle>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('highlight')}
+                onPressedChange={() => handleSelectTool('highlight')}
+                size="sm"
+                aria-label="Destacar"
+                className="h-9 w-9 p-0"
+              >
+                <Highlighter className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Destacar</p></TooltipContent>
+          </Tooltip>
 
-        <Toggle
-          pressed={isToolActive('stamp')}
-          onPressedChange={handleImageClick}
-          size="sm"
-          aria-label="Imagem"
-          className="h-9 w-9 p-0"
-        >
-          <Image className="h-4 w-4" />
-        </Toggle>
-      </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('underline')}
+                onPressedChange={() => handleSelectTool('underline')}
+                size="sm"
+                aria-label="Sublinhar"
+                className="h-9 w-9 p-0"
+              >
+                <Underline className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Sublinhar</p></TooltipContent>
+          </Tooltip>
 
-      <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('strikeout')}
+                onPressedChange={() => handleSelectTool('strikeout')}
+                size="sm"
+                aria-label="Riscado"
+                className="h-9 w-9 p-0"
+              >
+                <Strikethrough className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Riscado</p></TooltipContent>
+          </Tooltip>
 
-      {/* Redaction */}
-      <div className="hidden sm:flex items-center gap-0.5">
-        <Toggle
-          pressed={isRedacting}
-          onPressedChange={handleRedactionMode}
-          size="sm"
-          aria-label="Censurar"
-          className={cn(
-            "h-9 w-9 p-0",
-            isRedacting && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('note')}
+                onPressedChange={() => handleSelectTool('note')}
+                size="sm"
+                aria-label="Nota"
+                className="h-9 w-9 p-0"
+              >
+                <StickyNote className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Nota adesiva</p></TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+
+        {/* Shapes */}
+        <div className="hidden sm:flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('square')}
+                onPressedChange={() => handleSelectTool('square')}
+                size="sm"
+                aria-label="Retângulo"
+                className="h-9 w-9 p-0"
+              >
+                <Square className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Retângulo</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('circle')}
+                onPressedChange={() => handleSelectTool('circle')}
+                size="sm"
+                aria-label="Elipse"
+                className="h-9 w-9 p-0"
+              >
+                <Circle className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Elipse</p></TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('lineArrow')}
+                onPressedChange={() => handleSelectTool('lineArrow')}
+                size="sm"
+                aria-label="Seta"
+                className="h-9 w-9 p-0"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Seta</p></TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isToolActive('stamp')}
+                onPressedChange={handleImageClick}
+                size="sm"
+                aria-label="Imagem"
+                className="h-9 w-9 p-0"
+              >
+                <Image className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Inserir imagem</p></TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+
+        {/* Redaction */}
+        <div className="hidden sm:flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={isRedacting}
+                onPressedChange={handleRedactionMode}
+                size="sm"
+                aria-label="Censurar"
+                className={cn(
+                  "h-9 w-9 p-0",
+                  isRedacting && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                )}
+              >
+                <EyeOff className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Censurar</p></TooltipContent>
+          </Tooltip>
+          
+          {isRedacting && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleCommitRedactions}
+                  className="h-9 gap-1 px-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="hidden md:inline">Aplicar</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Aplicar censuras permanentemente</p></TooltipContent>
+            </Tooltip>
           )}
-        >
-          <EyeOff className="h-4 w-4" />
-        </Toggle>
-        
-        {isRedacting && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleCommitRedactions}
-            className="h-9 gap-1 px-2"
-          >
-            <CheckCircle className="h-4 w-4" />
-            <span className="hidden md:inline">Aplicar</span>
-          </Button>
-        )}
-      </div>
+        </div>
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      {/* Panel toggles */}
-      <div className="hidden md:flex items-center gap-0.5">
-        <Toggle
-          pressed={rightPanel === 'properties'}
-          onPressedChange={() => onTogglePanel('properties')}
-          size="sm"
-          aria-label="Propriedades"
-          className="h-9 w-9 p-0"
-        >
-          <Settings2 className="h-4 w-4" />
-        </Toggle>
-        <Toggle
-          pressed={rightPanel === 'comments'}
-          onPressedChange={() => onTogglePanel('comments')}
-          size="sm"
-          aria-label="Comentários"
-          className="h-9 w-9 p-0"
-        >
-          <MessageSquare className="h-4 w-4" />
-        </Toggle>
-      </div>
+        {/* Panel toggles */}
+        <div className="hidden md:flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={rightPanel === 'properties'}
+                onPressedChange={() => onTogglePanel('properties')}
+                size="sm"
+                aria-label="Propriedades"
+                className="h-9 w-9 p-0"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Propriedades</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                pressed={rightPanel === 'comments'}
+                onPressedChange={() => onTogglePanel('comments')}
+                size="sm"
+                aria-label="Comentários"
+                className="h-9 w-9 p-0"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent><p>Comentários</p></TooltipContent>
+          </Tooltip>
+        </div>
 
-      <Separator orientation="vertical" className="h-6 mx-1 hidden md:block" />
+        <Separator orientation="vertical" className="h-6 mx-1 hidden md:block" />
 
-      {/* Zoom Controls */}
-      <div className="flex items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleZoomOut}
-          className="h-9 w-9 p-0"
-          aria-label="Diminuir zoom"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleZoomIn}
-          className="h-9 w-9 p-0"
-          aria-label="Aumentar zoom"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomOut}
+                className="h-9 w-9 p-0"
+                aria-label="Diminuir zoom"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Diminuir zoom</p></TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomIn}
+                className="h-9 w-9 p-0"
+                aria-label="Aumentar zoom"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Aumentar zoom</p></TooltipContent>
+          </Tooltip>
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    aria-label="Mais opções de zoom"
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleFitWidth}>
+                    Ajustar à largura
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleFitPage}>
+                    Ajustar à página
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(0.5)}>
+                    50%
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(0.75)}>
+                    75%
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(1)}>
+                    100%
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(1.5)}>
+                    150%
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(2)}>
+                    200%
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent><p>Opções de zoom</p></TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Separator orientation="vertical" className="h-6 mx-1" />
+
+        {/* Export */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleExport}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Exportar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>Exportar PDF</p></TooltipContent>
+        </Tooltip>
+
+        {/* More Options (Mobile) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 p-0"
-              aria-label="Mais opções de zoom"
+              className="h-9 w-9 p-0 sm:hidden"
+              aria-label="Mais opções"
             >
-              <Maximize className="h-4 w-4" />
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleFitWidth}>
-              Ajustar à largura
+            <DropdownMenuItem onClick={() => handleSelectTool('freeText')}>
+              <Type className="h-4 w-4 mr-2" />
+              Texto
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleFitPage}>
-              Ajustar à página
+            <DropdownMenuItem onClick={() => handleSelectTool('ink')}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Desenho livre
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSelectTool('highlight')}>
+              <Highlighter className="h-4 w-4 mr-2" />
+              Destacar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSelectTool('underline')}>
+              <Underline className="h-4 w-4 mr-2" />
+              Sublinhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSelectTool('strikeout')}>
+              <Strikethrough className="h-4 w-4 mr-2" />
+              Riscado
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSelectTool('note')}>
+              <StickyNote className="h-4 w-4 mr-2" />
+              Nota
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(0.5)}>
-              50%
+            <DropdownMenuItem onClick={() => handleSelectTool('square')}>
+              <Square className="h-4 w-4 mr-2" />
+              Retângulo
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(0.75)}>
-              75%
+            <DropdownMenuItem onClick={() => handleSelectTool('circle')}>
+              <Circle className="h-4 w-4 mr-2" />
+              Elipse
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(1)}>
-              100%
+            <DropdownMenuItem onClick={() => handleSelectTool('lineArrow')}>
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Seta
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(1.5)}>
-              150%
+            <DropdownMenuItem onClick={handleImageClick}>
+              <Image className="h-4 w-4 mr-2" />
+              Imagem
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => zoomProvider?.requestZoom(2)}>
-              200%
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleRedactionMode}>
+              <EyeOff className="h-4 w-4 mr-2" />
+              {isRedacting ? 'Desativar censura' : 'Censurar'}
+            </DropdownMenuItem>
+            {isRedacting && (
+              <DropdownMenuItem onClick={handleCommitRedactions}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Aplicar censuras
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onTogglePanel('properties')}>
+              <Settings2 className="h-4 w-4 mr-2" />
+              Propriedades
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onTogglePanel('comments')}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Comentários
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <Separator orientation="vertical" className="h-6 mx-1" />
-
-      {/* Export */}
-      <Button
-        variant="default"
-        size="sm"
-        onClick={handleExport}
-        className="h-9 gap-1.5"
-      >
-        <Download className="h-4 w-4" />
-        <span className="hidden sm:inline">Exportar</span>
-      </Button>
-
-      {/* More Options (Mobile) */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 w-9 p-0 sm:hidden"
-            aria-label="Mais opções"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleSelectTool('freeText')}>
-            <Type className="h-4 w-4 mr-2" />
-            Texto
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleSelectTool('ink')}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Desenho livre
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleSelectTool('highlight')}>
-            <Highlighter className="h-4 w-4 mr-2" />
-            Destacar
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleSelectTool('note')}>
-            <StickyNote className="h-4 w-4 mr-2" />
-            Nota
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleSelectTool('square')}>
-            <Square className="h-4 w-4 mr-2" />
-            Retângulo
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleSelectTool('circle')}>
-            <Circle className="h-4 w-4 mr-2" />
-            Elipse
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleSelectTool('lineArrow')}>
-            <ArrowRight className="h-4 w-4 mr-2" />
-            Seta
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleImageClick}>
-            <Image className="h-4 w-4 mr-2" />
-            Imagem
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleRedactionMode}>
-            <EyeOff className="h-4 w-4 mr-2" />
-            {isRedacting ? 'Desativar censura' : 'Censurar'}
-          </DropdownMenuItem>
-          {isRedacting && (
-            <DropdownMenuItem onClick={handleCommitRedactions}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Aplicar censuras
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onTogglePanel('properties')}>
-            <Settings2 className="h-4 w-4 mr-2" />
-            Propriedades
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onTogglePanel('comments')}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Comentários
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    </TooltipProvider>
   );
 };
