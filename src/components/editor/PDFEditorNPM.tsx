@@ -18,7 +18,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { EditorToolbar } from './EditorToolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
@@ -206,21 +206,8 @@ const PDFEditorContent = ({
         <Drawer open={leftPanel === 'properties'} onOpenChange={(open) => {
           if (!open) setLeftPanel('none');
         }}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="flex items-center justify-between p-4">
-              <DrawerTitle>Propriedades</DrawerTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLeftPanel('none')}
-                className="h-6 w-6 p-0 ml-auto"
-              >
-                <span className="text-lg">×</span>
-              </Button>
-            </DrawerHeader>
-            <div className="overflow-y-auto">
-              <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" />
-            </div>
+          <DrawerContent className="max-h-[90vh] p-0">
+            <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" isMobile={true} />
           </DrawerContent>
         </Drawer>
       )}
@@ -230,21 +217,8 @@ const PDFEditorContent = ({
         <Drawer open={rightPanel === 'comments'} onOpenChange={(open) => {
           if (!open) setRightPanel('none');
         }}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="flex items-center justify-between p-4">
-              <DrawerTitle>Comentários</DrawerTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setRightPanel('none')}
-                className="h-6 w-6 p-0 ml-auto"
-              >
-                <span className="text-lg">×</span>
-              </Button>
-            </DrawerHeader>
-            <div className="overflow-y-auto">
-              <CommentsPanel onClose={() => setRightPanel('none')} anchor="right" />
-            </div>
+          <DrawerContent className="max-h-[90vh] p-0">
+            <CommentsPanel onClose={() => setRightPanel('none')} anchor="right" isMobile={true} />
           </DrawerContent>
         </Drawer>
       )}

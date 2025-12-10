@@ -11,9 +11,10 @@ import { cn } from '@/lib/utils';
 interface CommentsPanelProps {
   onClose: () => void;
   anchor?: 'left' | 'right';
+  isMobile?: boolean;
 }
 
-export const CommentsPanel = ({ onClose, anchor = 'right' }: CommentsPanelProps) => {
+export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: CommentsPanelProps) => {
   const { state, provides } = useAnnotation();
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [expandedPages, setExpandedPages] = useState<Record<number, boolean>>({});
@@ -26,13 +27,15 @@ export const CommentsPanel = ({ onClose, anchor = 'right' }: CommentsPanelProps)
     
     Object.entries(state.pages).forEach(([pageIndex, uids]) => {
       const pageNum = parseInt(pageIndex);
-      grouped[pageNum] = uids.map(uid => state.byUid[uid]).filter(Boolean);
+      grouped[pageNum] = (uids as any[]).map(uid => state.byUid[uid]).filter(Boolean);
     });
     
     return grouped;
   }, [state?.pages, state?.byUid]);
 
-  const panelClass = anchor === 'left'
+  const panelClass = isMobile
+    ? "w-full flex flex-col shrink-0"
+    : anchor === 'left'
     ? "w-80 border-r border-border bg-card flex flex-col shrink-0"
     : "w-80 border-l border-border bg-card flex flex-col shrink-0";
 

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 interface PropertiesPanelProps {
   onClose: () => void;
   anchor?: 'left' | 'right';
+  isMobile?: boolean;
 }
 
 const COLORS = [
@@ -27,7 +28,7 @@ const FONTS = [
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64];
 
-export const PropertiesPanel = ({ onClose, anchor = 'right' }: PropertiesPanelProps) => {
+export const PropertiesPanel = ({ onClose, anchor = 'right', isMobile = false }: PropertiesPanelProps) => {
   const { state, provides } = useAnnotation();
   
   const activeTool = state?.activeToolId;
@@ -40,7 +41,9 @@ export const PropertiesPanel = ({ onClose, anchor = 'right' }: PropertiesPanelPr
   }, [activeTool, state?.tools]);
 
   // compute classes based on anchor
-  const panelClass = anchor === 'left'
+  const panelClass = isMobile
+    ? "w-full flex flex-col shrink-0"
+    : anchor === 'left'
     ? "w-72 border-r border-border bg-card flex flex-col shrink-0"
     : "w-72 border-l border-border bg-card flex flex-col shrink-0";
 
