@@ -24,7 +24,6 @@ import { EditorToolbar } from './EditorToolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
 import { PageNavigator } from './PageNavigator';
-import { TextContextMenu } from './TextContextMenu';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -161,9 +160,6 @@ const PDFEditorContent = ({
                 
                 {/* Page Navigator */}
                 <PageNavigator />
-                
-                {/* Text Selection Context Menu */}
-                <TextContextMenu />
               </div>
             </GlobalPointerProvider>
           )}

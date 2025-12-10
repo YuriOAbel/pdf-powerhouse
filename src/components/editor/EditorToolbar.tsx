@@ -304,7 +304,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={handleSelectMode}
                 size="sm"
                 aria-label="Selecionar"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${mode === 'select' && !activeTool && !isPanning ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <MousePointer2 className="h-4 w-4" />
               </Toggle>
@@ -319,7 +319,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={handlePanMode}
                 size="sm"
                 aria-label="Mover"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isPanning ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Hand className="h-4 w-4" />
               </Toggle>
@@ -339,7 +339,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('freeText')}
                 size="sm"
                 aria-label="Texto"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('freeText') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Type className="h-4 w-4" />
               </Toggle>
@@ -354,7 +354,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('ink')}
                 size="sm"
                 aria-label="Desenho livre"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('ink') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Pencil className="h-4 w-4" />
               </Toggle>
@@ -369,7 +369,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('highlight')}
                 size="sm"
                 aria-label="Destacar"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('highlight') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Highlighter className="h-4 w-4" />
               </Toggle>
@@ -384,7 +384,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('underline')}
                 size="sm"
                 aria-label="Sublinhar"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('underline') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Underline className="h-4 w-4" />
               </Toggle>
@@ -399,7 +399,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('strikeout')}
                 size="sm"
                 aria-label="Riscado"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('strikeout') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Strikethrough className="h-4 w-4" />
               </Toggle>
@@ -414,7 +414,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('note')}
                 size="sm"
                 aria-label="Nota"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('note') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <StickyNote className="h-4 w-4" />
               </Toggle>
@@ -434,7 +434,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('square')}
                 size="sm"
                 aria-label="Retângulo"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('square') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Square className="h-4 w-4" />
               </Toggle>
@@ -448,8 +448,8 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 pressed={isToolActive('circle')}
                 onPressedChange={() => handleSelectTool('circle')}
                 size="sm"
-                aria-label="Elipse"
-                className="h-9 w-9 p-0"
+                aria-label="Círculo"
+                className={`h-9 w-9 p-0 ${isToolActive('circle') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Circle className="h-4 w-4" />
               </Toggle>
@@ -464,7 +464,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={() => handleSelectTool('lineArrow')}
                 size="sm"
                 aria-label="Seta"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('lineArrow') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <ArrowRight className="h-4 w-4" />
               </Toggle>
@@ -479,7 +479,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 onPressedChange={handleImageClick}
                 size="sm"
                 aria-label="Imagem"
-                className="h-9 w-9 p-0"
+                className={`h-9 w-9 p-0 ${isToolActive('stamp') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
               >
                 <Image className="h-4 w-4" />
               </Toggle>
