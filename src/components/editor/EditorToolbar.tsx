@@ -42,6 +42,8 @@ import { usePan } from '@embedpdf/plugin-pan/react';
 import { useExportCapability } from '@embedpdf/plugin-export/react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { PanelType } from './PDFEditorNPM';
 import { useEditorStore } from '@/store/editorStore';
 
@@ -59,10 +61,6 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { pdfFile } = useEditorStore();
   
-  // Undo/Redo history state (basic implementation)
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
-  
   // Hooks from EmbedPDF
   const { state: annotationState, provides: annotationProvider } = useAnnotation();
   const { provides: zoomProvider } = useZoomCapability();
@@ -70,7 +68,41 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
   const { provides: panProvider, isPanning } = usePan();
   const { provides: exportProvider } = useExportCapability();
 
+  // Undo/Redo hook
+  const { undo, redo, canUndo, canRedo } = useUndoRedo({
+    annotationState,
+    annotationProvider,
+    enabled: true,
+  });
+
   const activeTool = annotationState?.activeToolId;
+
+  // Undo/Redo handlers (definidas antes de useKeyboardShortcuts)
+  const handleUndo = () => {
+    if (!canUndo) {
+      toast.info('Nada para desfazer');
+      return;
+    }
+    undo();
+    toast.success('Desfeito');
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) {
+      toast.info('Nada para refazer');
+      return;
+    }
+    redo();
+    toast.success('Refeito');
+  };
+
+  // Keyboard shortcuts for undo/redo
+  useKeyboardShortcuts({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    canUndo,
+    canRedo,
+  });
 
   // Deactivate Pan when selecting a tool
   const deactivatePan = () => {
@@ -180,17 +212,6 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
     e.target.value = '';
   };
 
-  // Undo/Redo handlers (basic implementation - annotation-based)
-  const handleUndo = () => {
-    // Note: EmbedPDF doesn't expose a built-in undo/redo API
-    // This is a placeholder for future implementation
-    toast.info('Funcionalidade de desfazer em desenvolvimento');
-  };
-
-  const handleRedo = () => {
-    toast.info('Funcionalidade de refazer em desenvolvimento');
-  };
-
   // Export handler
   const handleExport = async () => {
     if (!exportProvider) {
@@ -246,7 +267,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 size="sm"
                 onClick={handleUndo}
                 className="h-9 w-9 p-0"
-                disabled
+                disabled={!canUndo}
               >
                 <Undo2 className="h-4 w-4" />
               </Button>
@@ -261,7 +282,7 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
                 size="sm"
                 onClick={handleRedo}
                 className="h-9 w-9 p-0"
-                disabled
+                disabled={!canRedo}
               >
                 <Redo2 className="h-4 w-4" />
               </Button>
