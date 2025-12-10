@@ -8,6 +8,7 @@ import { LoaderPluginPackage } from '@embedpdf/plugin-loader/react';
 import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/react';
 import { ZoomPluginPackage, ZoomMode, useZoomCapability } from '@embedpdf/plugin-zoom/react';
 import { ExportPluginPackage } from '@embedpdf/plugin-export/react';
+import { HistoryPluginPackage } from '@embedpdf/plugin-history/react';
 import { AnnotationLayer, AnnotationPluginPackage, useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { RedactionLayer, RedactionPluginPackage } from '@embedpdf/plugin-redaction/react';
 import { InteractionManagerPluginPackage, GlobalPointerProvider, PagePointerProvider } from '@embedpdf/plugin-interaction-manager/react';
@@ -260,6 +261,7 @@ export const PDFEditorNPM = ({
     createPluginRegistration(InteractionManagerPluginPackage),
     createPluginRegistration(PanPluginPackage),
     createPluginRegistration(SelectionPluginPackage),
+    createPluginRegistration(HistoryPluginPackage),
     createPluginRegistration(AnnotationPluginPackage, {
       autoCommit: true,
       deactivateToolAfterCreate: false,
