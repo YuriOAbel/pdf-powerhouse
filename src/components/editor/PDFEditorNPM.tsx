@@ -18,6 +18,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { EditorToolbar } from './EditorToolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
@@ -38,13 +39,15 @@ const PDFEditorContent = ({
   rightPanel,
   setLeftPanel,
   setRightPanel,
-  pluginsReady
+  pluginsReady,
+  isMobile
 }: {
   leftPanel: PanelType;
   rightPanel: PanelType;
   setLeftPanel: (p: PanelType) => void;
   setRightPanel: (p: PanelType) => void;
   pluginsReady: boolean;
+  isMobile: boolean;
 }) => {
   const { state: annotationState } = useAnnotation();
   const { state: zoomState, provides: zoomProvider } = useZoomCapability();
@@ -63,6 +66,11 @@ const PDFEditorContent = ({
   const toggleLeftPanel = useCallback((panel: PanelType) => {
     const newPanel = leftPanel === panel ? 'none' : panel;
     setLeftPanel(newPanel);
+    
+    // On mobile, close right panel when opening left panel
+    if (isMobile && newPanel !== 'none' && rightPanel !== 'none') {
+      setRightPanel('none');
+    }
 
     // Only adjust zoom if opening a panel AND zoom is above 80%
     if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
@@ -75,11 +83,16 @@ const PDFEditorContent = ({
         }, 160);
       }
     }
-  }, [leftPanel, setLeftPanel, zoomProvider, zoomState]);
+  }, [leftPanel, setLeftPanel, rightPanel, setRightPanel, isMobile, zoomProvider, zoomState]);
 
   const toggleRightPanel = useCallback((panel: PanelType) => {
     const newPanel = rightPanel === panel ? 'none' : panel;
     setRightPanel(newPanel);
+    
+    // On mobile, close left panel when opening right panel
+    if (isMobile && newPanel !== 'none' && leftPanel !== 'none') {
+      setLeftPanel('none');
+    }
 
     // Only adjust zoom if opening a panel AND zoom is above 80%
     if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
@@ -92,7 +105,7 @@ const PDFEditorContent = ({
         }, 160);
       }
     }
-  }, [rightPanel, setRightPanel, zoomProvider, zoomState]);
+  }, [rightPanel, setRightPanel, leftPanel, setLeftPanel, isMobile, zoomProvider, zoomState]);
 
   return (
     <div className="flex flex-col h-full flex-1 overflow-hidden">
@@ -104,10 +117,10 @@ const PDFEditorContent = ({
         onToggleRight={(panel) => toggleRightPanel(panel)}
       />
       
-      {/* Main Content Area: left sidebar | viewer | right sidebar */}
+      {/* Main Content Area: left sidebar | viewer | right sidebar (desktop only) */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left Sidebar (Properties) */}
-        {leftPanel === 'properties' && (
+        {/* Left Sidebar (Properties) - Desktop only */}
+        {!isMobile && leftPanel === 'properties' && (
           <div className="flex-shrink-0">
             <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" />
           </div>
@@ -180,13 +193,61 @@ const PDFEditorContent = ({
           )}
         </div>
 
-        {/* Right Sidebar (Comments) */}
-        {rightPanel === 'comments' && (
+        {/* Right Sidebar (Comments) - Desktop only */}
+        {!isMobile && rightPanel === 'comments' && (
           <div className="flex-shrink-0">
             <CommentsPanel onClose={() => setRightPanel('none')} anchor="right" />
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Sheet for Properties */}
+      {isMobile && (
+        <Drawer open={leftPanel === 'properties'} onOpenChange={(open) => {
+          if (!open) setLeftPanel('none');
+        }}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="flex items-center justify-between p-4">
+              <DrawerTitle>Propriedades</DrawerTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLeftPanel('none')}
+                className="h-6 w-6 p-0 ml-auto"
+              >
+                <span className="text-lg">×</span>
+              </Button>
+            </DrawerHeader>
+            <div className="overflow-y-auto">
+              <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
+
+      {/* Mobile Bottom Sheet for Comments */}
+      {isMobile && (
+        <Drawer open={rightPanel === 'comments'} onOpenChange={(open) => {
+          if (!open) setRightPanel('none');
+        }}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="flex items-center justify-between p-4">
+              <DrawerTitle>Comentários</DrawerTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRightPanel('none')}
+                className="h-6 w-6 p-0 ml-auto"
+              >
+                <span className="text-lg">×</span>
+              </Button>
+            </DrawerHeader>
+            <div className="overflow-y-auto">
+              <CommentsPanel onClose={() => setRightPanel('none')} anchor="right" />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
     </div>
   );
 };
@@ -295,6 +356,7 @@ export const PDFEditorNPM = ({
           setLeftPanel={setLeftPanel}
           setRightPanel={setRightPanel}
           pluginsReady={pluginsReady}
+          isMobile={isMobile}
         />
       )}
     </EmbedPDF>
