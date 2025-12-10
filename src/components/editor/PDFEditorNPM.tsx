@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { EditorToolbar } from './EditorToolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
@@ -186,8 +187,12 @@ export const PDFEditorNPM = ({
   onError 
 }: PDFEditorNPMProps) => {
   const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
+  const isMobile = useIsMobile();
   const [leftPanel, setLeftPanel] = useState<PanelType>('none');   // NEW
   const [rightPanel, setRightPanel] = useState<PanelType>('none'); // NEW
+
+  // Determine zoom level based on device type
+  const defaultZoomLevel = isMobile ? ZoomMode.FitWidth : 0.77;
 
   // Register all required plugins
   const plugins = useMemo(() => [
@@ -203,7 +208,7 @@ export const PDFEditorNPM = ({
     createPluginRegistration(ScrollPluginPackage),
     createPluginRegistration(RenderPluginPackage),
     createPluginRegistration(ZoomPluginPackage, { 
-      defaultZoomLevel: ZoomMode.FitWidth,
+      defaultZoomLevel: defaultZoomLevel,
       minZoom: 0.25,
       maxZoom: 4,
     }),
@@ -219,7 +224,7 @@ export const PDFEditorNPM = ({
       drawBlackBoxes: true,
     }),
     createPluginRegistration(ExportPluginPackage),
-  ], [pdfUrl]);
+  ], [pdfUrl, defaultZoomLevel]);
 
   const handleInitialized = useCallback(async () => {
     console.log('EmbedPDF initialized with plugins');
