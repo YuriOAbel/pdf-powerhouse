@@ -29,16 +29,20 @@ interface PDFEditorNPMProps {
   onError?: (error: Error) => void;
 }
 
-export type RightPanelType = 'none' | 'properties' | 'comments';
+export type PanelType = 'none' | 'properties' | 'comments';
 
-// Inner component to access hooks inside EmbedPDF context
-const PDFEditorContent = ({ 
-  rightPanel, 
+/** Inner component to access hooks inside EmbedPDF context */
+const PDFEditorContent = ({
+  leftPanel,
+  rightPanel,
+  setLeftPanel,
   setRightPanel,
-  pluginsReady 
-}: { 
-  rightPanel: RightPanelType;
-  setRightPanel: (panel: RightPanelType) => void;
+  pluginsReady
+}: {
+  leftPanel: PanelType;
+  rightPanel: PanelType;
+  setLeftPanel: (p: PanelType) => void;
+  setRightPanel: (p: PanelType) => void;
   pluginsReady: boolean;
 }) => {
   const { state: annotationState } = useAnnotation();
@@ -49,101 +53,128 @@ const PDFEditorContent = ({
     const toolsWithProperties = ['freeText', 'ink', 'highlight', 'underline', 'strikeout', 'squiggly', 'square', 'circle', 'lineArrow', 'note', 'stamp'];
     
     if (annotationState?.activeToolId && toolsWithProperties.includes(annotationState.activeToolId)) {
-      setRightPanel('properties');
+      // open left panel (properties) automatically
+      setLeftPanel('properties');
     }
-  }, [annotationState?.activeToolId, setRightPanel]);
+  }, [annotationState?.activeToolId, setLeftPanel]);
 
-  // Adjust zoom when panel opens to prevent PDF from being cut off
-  const togglePanel = useCallback((panel: RightPanelType) => {
+  // Generic togglers for left/right panels
+  const toggleLeftPanel = useCallback((panel: PanelType) => {
+    const newPanel = leftPanel === panel ? 'none' : panel;
+    setLeftPanel(newPanel);
+
+    // Adjust zoom to fit width after layout change
+    if (newPanel !== 'none' && zoomProvider) {
+      // use a short delay to wait DOM changes
+      setTimeout(() => {
+        zoomProvider.requestZoom('fit-width' as any);
+      }, 160);
+    }
+  }, [leftPanel, setLeftPanel, zoomProvider]);
+
+  const toggleRightPanel = useCallback((panel: PanelType) => {
     const newPanel = rightPanel === panel ? 'none' : panel;
     setRightPanel(newPanel);
-    
-    // When opening a panel, adjust zoom after layout change
+
     if (newPanel !== 'none' && zoomProvider) {
       setTimeout(() => {
         zoomProvider.requestZoom('fit-width' as any);
-      }, 150);
+      }, 160);
     }
   }, [rightPanel, setRightPanel, zoomProvider]);
 
   return (
     <div className="flex flex-col h-full flex-1 overflow-hidden">
-      {/* Custom Toolbar */}
+      {/* Toolbar receives both toggles (left/right) */}
       <EditorToolbar 
+        leftPanel={leftPanel}
         rightPanel={rightPanel}
-        onTogglePanel={togglePanel}
+        onToggleLeft={(panel) => toggleLeftPanel(panel)}
+        onToggleRight={(panel) => toggleRightPanel(panel)}
       />
       
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* PDF Viewport */}
-        {!pluginsReady ? (
-          <div className="flex-1 flex items-center justify-center bg-muted/30">
-            <div className="flex flex-col items-center gap-4">
-              <Skeleton className="w-[300px] h-[400px] rounded-lg" />
-              <p className="text-sm text-muted-foreground animate-pulse">
-                Carregando documento...
-              </p>
-            </div>
+      {/* Main Content Area: left sidebar | viewer | right sidebar */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Left Sidebar (Properties) */}
+        {leftPanel === 'properties' && (
+          <div className="flex-shrink-0">
+            <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" />
           </div>
-        ) : (
-          <GlobalPointerProvider>
-            <div className="flex-1 relative min-w-0">
-              <Viewport 
-                className="h-full w-full bg-muted/50"
-                style={{ minHeight: 0 }}
-              >
-                <Scroller
-                  renderPage={({ pageIndex, scale, width, height, rotation }) => (
-                    <PagePointerProvider
-                      pageIndex={pageIndex}
-                      pageWidth={width}
-                      pageHeight={height}
-                      rotation={rotation}
-                      scale={scale}
-                    >
-                      <div 
-                        style={{ width, height, position: 'relative' }}
-                        className="shadow-lg bg-white"
-                      >
-                        <RenderLayer 
-                          pageIndex={pageIndex} 
-                          style={{ pointerEvents: 'none' }}
-                        />
-                        <SelectionLayer 
-                          pageIndex={pageIndex} 
-                          scale={scale}
-                        />
-                        <AnnotationLayer 
-                          pageIndex={pageIndex} 
-                          scale={scale}
-                          pageWidth={width}
-                          pageHeight={height}
-                          rotation={rotation}
-                        />
-                        <RedactionLayer 
-                          pageIndex={pageIndex} 
-                          scale={scale} 
-                          rotation={rotation} 
-                        />
-                      </div>
-                    </PagePointerProvider>
-                  )}
-                />
-              </Viewport>
-              
-              {/* Page Navigator */}
-              <PageNavigator />
-              
-              {/* Text Selection Context Menu */}
-              <TextContextMenu />
-            </div>
-          </GlobalPointerProvider>
         )}
-        
-        {/* Right Panel */}
-        {rightPanel === 'properties' && <PropertiesPanel onClose={() => setRightPanel('none')} />}
-        {rightPanel === 'comments' && <CommentsPanel onClose={() => setRightPanel('none')} />}
+
+        {/* PDF Viewport (center) */}
+        <div className="flex-1 relative min-w-0">
+          {!pluginsReady ? (
+            <div className="flex-1 flex items-center justify-center bg-muted/30">
+              <div className="flex flex-col items-center gap-4">
+                <Skeleton className="w-[300px] h-[400px] rounded-lg" />
+                <p className="text-sm text-muted-foreground animate-pulse">
+                  Carregando documento.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <GlobalPointerProvider>
+              <div className="h-full w-full">
+                <Viewport 
+                  className="h-full w-full bg-muted/50"
+                  style={{ minHeight: 0 }}
+                >
+                  <Scroller
+                    renderPage={({ pageIndex, scale, width, height, rotation }) => (
+                      <PagePointerProvider
+                        pageIndex={pageIndex}
+                        pageWidth={width}
+                        pageHeight={height}
+                        rotation={rotation}
+                        scale={scale}
+                      >
+                        <div 
+                          style={{ width, height, position: 'relative' }}
+                          className="shadow-lg bg-white mx-auto"
+                        >
+                          <RenderLayer 
+                            pageIndex={pageIndex} 
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <SelectionLayer 
+                            pageIndex={pageIndex} 
+                            scale={scale}
+                          />
+                          <AnnotationLayer 
+                            pageIndex={pageIndex} 
+                            scale={scale}
+                            pageWidth={width}
+                            pageHeight={height}
+                            rotation={rotation}
+                          />
+                          <RedactionLayer
+                            pageIndex={pageIndex} 
+                            scale={scale} 
+                            rotation={rotation} 
+                          />
+                        </div>
+                      </PagePointerProvider>
+                    )}
+                  />
+                </Viewport>
+                
+                {/* Page Navigator */}
+                <PageNavigator />
+                
+                {/* Text Selection Context Menu */}
+                <TextContextMenu />
+              </div>
+            </GlobalPointerProvider>
+          )}
+        </div>
+
+        {/* Right Sidebar (Comments) */}
+        {rightPanel === 'comments' && (
+          <div className="flex-shrink-0">
+            <CommentsPanel onClose={() => setRightPanel('none')} anchor="right" />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -155,7 +186,8 @@ export const PDFEditorNPM = ({
   onError 
 }: PDFEditorNPMProps) => {
   const { engine, isLoading: engineLoading, error: engineError } = usePdfiumEngine();
-  const [rightPanel, setRightPanel] = useState<RightPanelType>('none');
+  const [leftPanel, setLeftPanel] = useState<PanelType>('none');   // NEW
+  const [rightPanel, setRightPanel] = useState<PanelType>('none'); // NEW
 
   // Register all required plugins
   const plugins = useMemo(() => [
@@ -198,7 +230,7 @@ export const PDFEditorNPM = ({
     window.location.reload();
   };
 
-  // Engine error
+  // Engine error / loading (existing logic kept)
   if (engineError) {
     onError?.(new Error(engineError.message));
     return (
@@ -222,7 +254,6 @@ export const PDFEditorNPM = ({
     );
   }
 
-  // Engine loading
   if (engineLoading || !engine) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -244,7 +275,9 @@ export const PDFEditorNPM = ({
     >
       {({ pluginsReady }) => (
         <PDFEditorContent 
+          leftPanel={leftPanel}
           rightPanel={rightPanel}
+          setLeftPanel={setLeftPanel}
           setRightPanel={setRightPanel}
           pluginsReady={pluginsReady}
         />

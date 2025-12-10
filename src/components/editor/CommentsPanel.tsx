@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 
 interface CommentsPanelProps {
   onClose: () => void;
+  anchor?: 'left' | 'right';
 }
 
-export const CommentsPanel = ({ onClose }: CommentsPanelProps) => {
+export const CommentsPanel = ({ onClose, anchor = 'right' }: CommentsPanelProps) => {
   const { state, provides } = useAnnotation();
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [expandedPages, setExpandedPages] = useState<Record<number, boolean>>({});
@@ -30,6 +31,10 @@ export const CommentsPanel = ({ onClose }: CommentsPanelProps) => {
     
     return grouped;
   }, [state?.pages, state?.byUid]);
+
+  const panelClass = anchor === 'left'
+    ? "w-80 border-r border-border bg-card flex flex-col shrink-0"
+    : "w-80 border-l border-border bg-card flex flex-col shrink-0";
 
   const pageNumbers = Object.keys(annotationsByPage).map(Number).sort((a, b) => a - b);
   const totalAnnotations = Object.values(annotationsByPage).flat().length;
@@ -98,7 +103,7 @@ export const CommentsPanel = ({ onClose }: CommentsPanelProps) => {
   };
 
   return (
-    <div className="w-80 border-l border-border bg-card flex flex-col shrink-0">
+    <div className={panelClass}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">

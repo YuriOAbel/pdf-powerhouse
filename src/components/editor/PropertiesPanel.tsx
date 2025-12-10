@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface PropertiesPanelProps {
   onClose: () => void;
+  anchor?: 'left' | 'right';
 }
 
 const COLORS = [
@@ -26,7 +27,7 @@ const FONTS = [
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64];
 
-export const PropertiesPanel = ({ onClose }: PropertiesPanelProps) => {
+export const PropertiesPanel = ({ onClose, anchor = 'right' }: PropertiesPanelProps) => {
   const { state, provides } = useAnnotation();
   
   const activeTool = state?.activeToolId;
@@ -37,6 +38,11 @@ export const PropertiesPanel = ({ onClose }: PropertiesPanelProps) => {
     const tool = state.tools.find(t => t.id === activeTool);
     return tool?.defaults || null;
   }, [activeTool, state?.tools]);
+
+  // compute classes based on anchor
+  const panelClass = anchor === 'left'
+    ? "w-72 border-r border-border bg-card flex flex-col shrink-0"
+    : "w-72 border-l border-border bg-card flex flex-col shrink-0";
 
   const handleColorChange = (color: string) => {
     if (activeTool && provides) {
@@ -78,7 +84,7 @@ export const PropertiesPanel = ({ onClose }: PropertiesPanelProps) => {
   const showShapeOptions = ['square', 'circle', 'lineArrow', 'ink', 'highlight', 'underline', 'strikeout', 'squiggly'].includes(activeTool || '');
 
   return (
-    <div className="w-72 border-l border-border bg-card flex flex-col shrink-0">
+    <div className={panelClass}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
         <h3 className="font-semibold text-sm">Propriedades</h3>

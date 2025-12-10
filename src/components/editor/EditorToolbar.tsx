@@ -42,17 +42,19 @@ import { usePan } from '@embedpdf/plugin-pan/react';
 import { useExportCapability } from '@embedpdf/plugin-export/react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { RightPanelType } from './PDFEditorNPM';
+import { PanelType } from './PDFEditorNPM';
 import { useEditorStore } from '@/store/editorStore';
 
 type EditorMode = 'select' | 'pan' | 'annotate' | 'redact';
 
 interface EditorToolbarProps {
-  rightPanel: RightPanelType;
-  onTogglePanel: (panel: RightPanelType) => void;
+  leftPanel: PanelType;
+  rightPanel: PanelType;
+  onToggleLeft: (panel: PanelType) => void;
+  onToggleRight: (panel: PanelType) => void;
 }
 
-export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps) => {
+export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRight }: EditorToolbarProps) => {
   const [mode, setMode] = useState<EditorMode>('select');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { pdfFile } = useEditorStore();
@@ -210,6 +212,15 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
   const handleZoomOut = () => zoomProvider?.zoomOut();
   const handleFitWidth = () => zoomProvider?.requestZoom('fit-width' as any);
   const handleFitPage = () => zoomProvider?.requestZoom('fit-page' as any);
+
+  // Panel handlers
+  const handleOpenProperties = () => {
+    onToggleLeft(leftPanel === 'properties' ? 'none' : 'properties');
+  };
+
+  const handleOpenComments = () => {
+    onToggleRight(rightPanel === 'comments' ? 'none' : 'comments');
+  };
 
   const isToolActive = (toolId: string) => activeTool === toolId;
   const isRedacting = mode === 'redact';
@@ -501,8 +512,8 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
           <Tooltip>
             <TooltipTrigger asChild>
               <Toggle
-                pressed={rightPanel === 'properties'}
-                onPressedChange={() => onTogglePanel('properties')}
+                pressed={leftPanel === 'properties'}
+                onPressedChange={handleOpenProperties}
                 size="sm"
                 aria-label="Propriedades"
                 className="h-9 w-9 p-0"
@@ -517,7 +528,7 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
             <TooltipTrigger asChild>
               <Toggle
                 pressed={rightPanel === 'comments'}
-                onPressedChange={() => onTogglePanel('comments')}
+                onPressedChange={handleOpenComments}
                 size="sm"
                 aria-label="Comentários"
                 className="h-9 w-9 p-0"
@@ -690,11 +701,11 @@ export const EditorToolbar = ({ rightPanel, onTogglePanel }: EditorToolbarProps)
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onTogglePanel('properties')}>
+            <DropdownMenuItem onClick={handleOpenProperties}>
               <Settings2 className="h-4 w-4 mr-2" />
               Propriedades
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onTogglePanel('comments')}>
+            <DropdownMenuItem onClick={handleOpenComments}>
               <MessageSquare className="h-4 w-4 mr-2" />
               Comentários
             </DropdownMenuItem>
