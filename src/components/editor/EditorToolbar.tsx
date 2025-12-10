@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Type, 
   Pencil, 
@@ -43,7 +43,6 @@ import { useExportCapability } from '@embedpdf/plugin-export/react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { PanelType } from './PDFEditorNPM';
 import { useEditorStore } from '@/store/editorStore';
 
@@ -68,43 +67,44 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
   const { provides: panProvider, isPanning } = usePan();
   const { provides: exportProvider } = useExportCapability();
 
-  // Undo/Redo hook
-  const { undo, redo, canUndo, canRedo } = useUndoRedo({
-    annotationState,
-    annotationProvider,
-    enabled: true,
-  });
+  // Undo/Redo hook (leverages EmbedPDF's HistoryPlugin)
+  const { canUndo, canRedo, handleUndo: historyUndo, handleRedo: historyRedo } = useUndoRedo();
 
-  const activeTool = annotationState?.activeToolId;
-
-  // Undo/Redo handlers (definidas antes de useKeyboardShortcuts)
+  // Wrapped handlers with toast notifications
   const handleUndo = () => {
-    console.debug('[EditorToolbar] Undo button clicked. Can undo:', canUndo);
-    if (!canUndo) {
-      toast.info('Nada para desfazer');
-      return;
-    }
-    undo();
+    historyUndo();
     toast.success('Desfeito');
   };
 
   const handleRedo = () => {
-    console.debug('[EditorToolbar] Redo button clicked. Can redo:', canRedo);
-    if (!canRedo) {
-      toast.info('Nada para refazer');
-      return;
-    }
-    redo();
+    historyRedo();
     toast.success('Refeito');
   };
 
+  const activeTool = annotationState?.activeToolId;
+
   // Keyboard shortcuts for undo/redo
-  useKeyboardShortcuts({
-    onUndo: handleUndo,
-    onRedo: handleRedo,
-    canUndo,
-    canRedo,
-  });
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z for undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) {
+          handleUndo();
+        }
+      }
+      // Ctrl+Y or Cmd+Shift+Z for redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        if (canRedo) {
+          handleRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, handleUndo, handleRedo]);
 
   // Deactivate Pan when selecting a tool
   const deactivatePan = () => {
