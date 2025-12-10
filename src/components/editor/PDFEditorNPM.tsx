@@ -47,7 +47,7 @@ const PDFEditorContent = ({
   pluginsReady: boolean;
 }) => {
   const { state: annotationState } = useAnnotation();
-  const { provides: zoomProvider } = useZoomCapability();
+  const { state: zoomState, provides: zoomProvider } = useZoomCapability();
 
   // Auto-open properties panel when a tool with configurable properties is selected
   useEffect(() => {
@@ -64,37 +64,35 @@ const PDFEditorContent = ({
     const newPanel = leftPanel === panel ? 'none' : panel;
     setLeftPanel(newPanel);
 
-    // Only adjust zoom if opening a panel and PDF is likely taking full width
-    if (newPanel !== 'none' && zoomProvider) {
-      // Check if we need to adjust zoom (PDF is probably at 100% width)
-      // Only apply fit-width if there's no right panel open or if we're opening left panel
-      const shouldAdjustZoom = rightPanel === 'none';
+    // Only adjust zoom if opening a panel AND zoom is above 80%
+    if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
+      const currentZoom = zoomState.currentZoom;
       
-      if (shouldAdjustZoom) {
+      // Only redefine zoom if it's above 80% to avoid toolbars being cut off
+      if (currentZoom > 0.8) {
         setTimeout(() => {
           zoomProvider.requestZoom('fit-width' as any);
         }, 160);
       }
     }
-  }, [leftPanel, setLeftPanel, zoomProvider, rightPanel]);
+  }, [leftPanel, setLeftPanel, zoomProvider, zoomState]);
 
   const toggleRightPanel = useCallback((panel: PanelType) => {
     const newPanel = rightPanel === panel ? 'none' : panel;
     setRightPanel(newPanel);
 
-    // Only adjust zoom if opening a panel and PDF is likely taking full width
-    if (newPanel !== 'none' && zoomProvider) {
-      // Check if we need to adjust zoom (PDF is probably at 100% width)
-      // Only apply fit-width if there's no left panel open or if we're opening right panel
-      const shouldAdjustZoom = leftPanel === 'none';
+    // Only adjust zoom if opening a panel AND zoom is above 80%
+    if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
+      const currentZoom = zoomState.currentZoom;
       
-      if (shouldAdjustZoom) {
+      // Only redefine zoom if it's above 80% to avoid toolbars being cut off
+      if (currentZoom > 0.8) {
         setTimeout(() => {
           zoomProvider.requestZoom('fit-width' as any);
         }, 160);
       }
     }
-  }, [rightPanel, setRightPanel, zoomProvider, leftPanel]);
+  }, [rightPanel, setRightPanel, zoomProvider, zoomState]);
 
   return (
     <div className="flex flex-col h-full flex-1 overflow-hidden">
