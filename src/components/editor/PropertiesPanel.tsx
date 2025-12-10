@@ -75,7 +75,7 @@ export const PropertiesPanel = ({ onClose }: PropertiesPanelProps) => {
   const currentOpacity = ((toolDefaults as any)?.opacity ?? 1) * 100;
 
   const showTextOptions = activeTool === 'freeText' || activeTool === 'note';
-  const showShapeOptions = ['square', 'circle', 'lineArrow', 'ink', 'highlight'].includes(activeTool || '');
+  const showShapeOptions = ['square', 'circle', 'lineArrow', 'ink', 'highlight', 'underline', 'strikeout', 'squiggly'].includes(activeTool || '');
 
   return (
     <div className="w-72 border-l border-border bg-card flex flex-col shrink-0">
