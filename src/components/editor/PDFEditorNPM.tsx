@@ -64,25 +64,37 @@ const PDFEditorContent = ({
     const newPanel = leftPanel === panel ? 'none' : panel;
     setLeftPanel(newPanel);
 
-    // Adjust zoom to fit width after layout change
+    // Only adjust zoom if opening a panel and PDF is likely taking full width
     if (newPanel !== 'none' && zoomProvider) {
-      // use a short delay to wait DOM changes
-      setTimeout(() => {
-        zoomProvider.requestZoom('fit-width' as any);
-      }, 160);
+      // Check if we need to adjust zoom (PDF is probably at 100% width)
+      // Only apply fit-width if there's no right panel open or if we're opening left panel
+      const shouldAdjustZoom = rightPanel === 'none';
+      
+      if (shouldAdjustZoom) {
+        setTimeout(() => {
+          zoomProvider.requestZoom('fit-width' as any);
+        }, 160);
+      }
     }
-  }, [leftPanel, setLeftPanel, zoomProvider]);
+  }, [leftPanel, setLeftPanel, zoomProvider, rightPanel]);
 
   const toggleRightPanel = useCallback((panel: PanelType) => {
     const newPanel = rightPanel === panel ? 'none' : panel;
     setRightPanel(newPanel);
 
+    // Only adjust zoom if opening a panel and PDF is likely taking full width
     if (newPanel !== 'none' && zoomProvider) {
-      setTimeout(() => {
-        zoomProvider.requestZoom('fit-width' as any);
-      }, 160);
+      // Check if we need to adjust zoom (PDF is probably at 100% width)
+      // Only apply fit-width if there's no left panel open or if we're opening right panel
+      const shouldAdjustZoom = leftPanel === 'none';
+      
+      if (shouldAdjustZoom) {
+        setTimeout(() => {
+          zoomProvider.requestZoom('fit-width' as any);
+        }, 160);
+      }
     }
-  }, [rightPanel, setRightPanel, zoomProvider]);
+  }, [rightPanel, setRightPanel, zoomProvider, leftPanel]);
 
   return (
     <div className="flex flex-col h-full flex-1 overflow-hidden">
