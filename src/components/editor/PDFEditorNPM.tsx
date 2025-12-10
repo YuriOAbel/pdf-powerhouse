@@ -51,7 +51,6 @@ const PDFEditorContent = ({
   isMobile: boolean;
 }) => {
   const { state: annotationState } = useAnnotation();
-  const { state: zoomState, provides: zoomProvider } = useZoomCapability();
 
   // Auto-open properties panel when a tool with configurable properties is selected
   useEffect(() => {
@@ -72,19 +71,7 @@ const PDFEditorContent = ({
     if (isMobile && newPanel !== 'none' && rightPanel !== 'none') {
       setRightPanel('none');
     }
-
-    // Only adjust zoom if opening a panel AND zoom is above 80%
-    if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
-      const currentZoom = zoomState.currentZoom;
-      
-      // Only redefine zoom if it's above 80% to avoid toolbars being cut off
-      if (currentZoom > 0.8) {
-        setTimeout(() => {
-          zoomProvider.requestZoom('fit-width' as any);
-        }, 160);
-      }
-    }
-  }, [leftPanel, setLeftPanel, rightPanel, setRightPanel, isMobile, zoomProvider, zoomState]);
+  }, [leftPanel, setLeftPanel, rightPanel, setRightPanel, isMobile]);
 
   const toggleRightPanel = useCallback((panel: PanelType) => {
     const newPanel = rightPanel === panel ? 'none' : panel;
@@ -94,19 +81,7 @@ const PDFEditorContent = ({
     if (isMobile && newPanel !== 'none' && leftPanel !== 'none') {
       setLeftPanel('none');
     }
-
-    // Only adjust zoom if opening a panel AND zoom is above 80%
-    if (newPanel !== 'none' && zoomProvider && zoomState?.currentZoom) {
-      const currentZoom = zoomState.currentZoom;
-      
-      // Only redefine zoom if it's above 80% to avoid toolbars being cut off
-      if (currentZoom > 0.8) {
-        setTimeout(() => {
-          zoomProvider.requestZoom('fit-width' as any);
-        }, 160);
-      }
-    }
-  }, [rightPanel, setRightPanel, leftPanel, setLeftPanel, isMobile, zoomProvider, zoomState]);
+  }, [rightPanel, setRightPanel, leftPanel, setLeftPanel, isMobile]);
 
   return (
     <div className="flex flex-col h-full flex-1 overflow-hidden">
