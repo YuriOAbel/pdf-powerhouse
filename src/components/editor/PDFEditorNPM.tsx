@@ -49,11 +49,28 @@ const PDFEditorContent = ({
   pluginsReady: boolean;
   isMobile: boolean;
 }) => {
-  const { state: annotationState } = useAnnotation();
+  const { state: annotationState, provides: annotationProvides } = useAnnotation();
+
+  // Definir defaults FIXOS para FreeText quando o plugin estiver pronto
+  useEffect(() => {
+    if (!pluginsReady || !annotationProvides) return;
+
+    console.log('⚙️ Configurando defaults FIXOS para FreeText');
+    
+    // Defaults fixos: vermelho (#ff0000), tamanho 12
+    annotationProvides.setToolDefaults('freeText', {
+      fontColor: '#ff0000',  // Vermelho
+      fontSize: 12,          // Tamanho 12
+      opacity: 1,            // Opacidade total
+    });
+    
+    console.log('✅ FreeText configurado: vermelho, tamanho 12');
+  }, [pluginsReady, annotationProvides]);
 
   // Auto-open properties panel when a tool with configurable properties is selected
+  // FreeText NÃO abre o painel pois usará defaults fixos
   useEffect(() => {
-    const toolsWithProperties = ['freeText', 'ink', 'highlight', 'underline', 'strikeout', 'squiggly', 'square', 'circle', 'lineArrow', 'note', 'stamp'];
+    const toolsWithProperties = ['ink', 'highlight', 'underline', 'strikeout', 'squiggly', 'square', 'circle', 'lineArrow', 'stamp'];
     
     if (annotationState?.activeToolId && toolsWithProperties.includes(annotationState.activeToolId)) {
       // open left panel (properties) automatically

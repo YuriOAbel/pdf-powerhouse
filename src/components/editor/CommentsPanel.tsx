@@ -80,7 +80,6 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
     // Return emoji or icon based on annotation type
     switch (type) {
       case 'Text':
-      case 'note':
         return '📝';
       case 'Highlight':
       case 'highlight':

@@ -16,7 +16,6 @@ import {
   Image,
   MessageSquare,
   Settings2,
-  StickyNote,
   Download,
   CheckCircle,
   Undo2,
@@ -406,21 +405,6 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
             </TooltipTrigger>
             <TooltipContent><p>Riscado</p></TooltipContent>
           </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                pressed={isToolActive('note')}
-                onPressedChange={() => handleSelectTool('note')}
-                size="sm"
-                aria-label="Nota"
-                className={`h-9 w-9 p-0 ${isToolActive('note') ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-md' : ''}`}
-              >
-                <StickyNote className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent><p>Nota adesiva</p></TooltipContent>
-          </Tooltip>
         </div>
 
         <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
@@ -690,10 +674,6 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
             <DropdownMenuItem onClick={() => handleSelectTool('strikeout')}>
               <Strikethrough className="h-4 w-4 mr-2" />
               Riscado
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSelectTool('note')}>
-              <StickyNote className="h-4 w-4 mr-2" />
-              Nota
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handleSelectTool('square')}>

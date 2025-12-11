@@ -83,8 +83,54 @@ export const PropertiesPanel = ({ onClose, anchor = 'right', isMobile = false }:
   const currentStrokeWidth = (toolDefaults as any)?.strokeWidth || 2;
   const currentOpacity = ((toolDefaults as any)?.opacity ?? 1) * 100;
 
-  const showTextOptions = activeTool === 'freeText' || activeTool === 'note';
+  const showTextOptions = activeTool === 'freeText';
   const showShapeOptions = ['square', 'circle', 'lineArrow', 'ink', 'highlight', 'underline', 'strikeout', 'squiggly'].includes(activeTool || '');
+
+  // FreeText usa defaults fixos - não permite customização
+  if (activeTool === 'freeText') {
+    return (
+      <div className={panelClass}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 border-b border-border">
+          <h3 className="font-semibold text-sm">Propriedades</h3>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-500 rounded-full p-2 flex-shrink-0">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-sm mb-1">Texto Livre</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  O texto livre usa configurações padrão fixas:
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-red-500 flex-shrink-0"></div>
+                    <span>Cor: Vermelho</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Tamanho: 12pt</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={panelClass}>
