@@ -14,6 +14,7 @@ import { RedactionLayer, RedactionPluginPackage } from '@embedpdf/plugin-redacti
 import { InteractionManagerPluginPackage, GlobalPointerProvider, PagePointerProvider } from '@embedpdf/plugin-interaction-manager/react';
 import { PanPluginPackage } from '@embedpdf/plugin-pan/react';
 import { SelectionPluginPackage, SelectionLayer } from '@embedpdf/plugin-selection/react';
+import { ThumbnailPluginPackage } from '@embedpdf/plugin-thumbnail/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,6 +24,7 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { EditorToolbar } from './EditorToolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
+import { ThumbnailsSidebar } from './ThumbnailsSidebar';
 import { PageNavigator } from './PageNavigator';
 
 interface PDFEditorNPMProps {
@@ -31,7 +33,7 @@ interface PDFEditorNPMProps {
   onError?: (error: Error) => void;
 }
 
-export type PanelType = 'none' | 'properties' | 'comments';
+export type PanelType = 'none' | 'properties' | 'comments' | 'thumbnails';
 
 /** Inner component to access hooks inside EmbedPDF context */
 const PDFEditorContent = ({
@@ -111,10 +113,16 @@ const PDFEditorContent = ({
       
       {/* Main Content Area: left sidebar | viewer | right sidebar (desktop only) */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left Sidebar (Properties) - Desktop only */}
+        {/* Left Sidebar - Desktop only */}
         {!isMobile && leftPanel === 'properties' && (
           <div className="flex-shrink-0">
             <PropertiesPanel onClose={() => setLeftPanel('none')} anchor="left" />
+          </div>
+        )}
+        
+        {!isMobile && leftPanel === 'thumbnails' && (
+          <div className="flex-shrink-0">
+            <ThumbnailsSidebar onClose={() => setLeftPanel('none')} anchor="left" />
           </div>
         )}
 
@@ -201,6 +209,17 @@ const PDFEditorContent = ({
         </Drawer>
       )}
 
+      {/* Mobile Bottom Sheet for Thumbnails */}
+      {isMobile && (
+        <Drawer open={leftPanel === 'thumbnails'} onOpenChange={(open) => {
+          if (!open) setLeftPanel('none');
+        }}>
+          <DrawerContent className="max-h-[90vh] p-0">
+            <ThumbnailsSidebar onClose={() => setLeftPanel('none')} anchor="left" isMobile={true} />
+          </DrawerContent>
+        </Drawer>
+      )}
+
       {/* Mobile Bottom Sheet for Comments */}
       {isMobile && (
         <Drawer open={rightPanel === 'comments'} onOpenChange={(open) => {
@@ -246,6 +265,7 @@ export const PDFEditorNPM = ({
       minZoom: 0.25,
       maxZoom: 4,
     }),
+    createPluginRegistration(ThumbnailPluginPackage),
     createPluginRegistration(InteractionManagerPluginPackage),
     createPluginRegistration(PanPluginPackage),
     createPluginRegistration(SelectionPluginPackage),

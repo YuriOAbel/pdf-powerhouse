@@ -21,7 +21,8 @@ import {
   Undo2,
   Redo2,
   Underline,
-  Strikethrough
+  Strikethrough,
+  LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -579,6 +580,27 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
               </Button>
             </TooltipTrigger>
             <TooltipContent><p>Aumentar zoom</p></TooltipContent>
+          </Tooltip>
+
+          {/* Botão de Miniaturas */}
+          <Separator orientation="vertical" className="h-8" />
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggleLeft(leftPanel === 'thumbnails' ? 'none' : 'thumbnails')}
+                className={cn(
+                  "h-9 w-9 p-0",
+                  leftPanel === 'thumbnails' && "bg-accent"
+                )}
+                aria-label="Miniaturas"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Miniaturas</p></TooltipContent>
           </Tooltip>
 
           <Tooltip>

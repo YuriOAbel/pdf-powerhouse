@@ -23,6 +23,7 @@
     "@embedpdf/plugin-render": "^1.5.0",
     "@embedpdf/plugin-scroll": "^1.5.0",
     "@embedpdf/plugin-selection": "^1.5.0",
+    "@embedpdf/plugin-thumbnail": "^1.5.0",
     "@embedpdf/plugin-viewport": "^1.5.0",
     "@embedpdf/plugin-zoom": "^1.5.0",
     "@hookform/resolvers": "^3.10.0",
