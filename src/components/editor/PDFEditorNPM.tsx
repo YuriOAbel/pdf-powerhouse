@@ -28,6 +28,7 @@ import { ThumbnailsSidebar } from './ThumbnailsSidebar';
 import { PageNavigator } from './PageNavigator';
 import { ExportModal } from './ExportModal';
 import { toast } from 'sonner';
+import { convertPdfToImages, downloadAllImages } from '@/lib/convertPdfToImage';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -56,21 +57,78 @@ const PDFEditorContent = ({
   const { state: annotationState, provides: annotationProvides } = useAnnotation();
   const { provides: exportProvides } = useExportCapability();
 
-  // Função de exportação para PDF
+  // Função de exportação unificada
   const handleExport = useCallback(async (format: string, filename: string) => {
-    if (format === 'pdf' && exportProvides) {
-      try {
+    console.log('🚀 handleExport chamado:', { format, filename });
+    
+    if (!exportProvides) {
+      toast.error('Exportação não disponível');
+      throw new Error('Export provider não disponível');
+    }
+
+    try {
+      if (format === 'pdf') {
+        // Exportação PDF usando EmbedPDF (funcionalidade original)
+        console.log('📄 Exportando PDF...');
         exportProvides.download();
         toast.success('PDF exportado com sucesso!');
-      } catch (error) {
-        console.error('Export error:', error);
-        toast.error('Erro ao exportar PDF');
-        throw error;
+      } else if (format === 'png' || format === 'jpg') {
+        console.log(`🖼️ Iniciando conversão para ${format.toUpperCase()}...`);
+        // Exportação de imagens usando PDF.js no frontend
+        toast.info('Preparando conversão...', {
+          description: 'Gerando PDF com todas as anotações'
+        });
+
+        // IMPORTANTE: Obter o PDF completo e editado do EmbedPDF
+        // saveAsCopy() retorna um ArrayBuffer com todas as anotações aplicadas
+        const task = exportProvides.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        
+        // Converter ArrayBuffer para Blob
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+
+        toast.info('Convertendo para imagem...', {
+          description: 'Renderizando todas as páginas',
+          duration: 10000,
+        });
+
+        // Converter usando backend
+        const result = await convertPdfToImages({
+          pdfBlob,
+          format: format as 'png' | 'jpg',
+          filename,
+          quality: format === 'jpg' ? 0.92 : undefined,
+          scale: 2, // Escala para boa qualidade
+          onProgress: (current, total) => {
+            console.log(`Processando ${current}/${total} páginas`);
+          },
+        });
+
+        if (result.success) {
+          toast.success(`${result.totalPages} página(s) convertida(s)!`, {
+            description: 'Iniciando downloads...'
+          });
+
+          // Baixar todas as imagens
+          downloadAllImages(result.images, filename, format as 'png' | 'jpg');
+          
+          toast.success('Download concluído!', {
+            description: `${result.totalPages} arquivo(s) baixado(s)`
+          });
+        } else {
+          throw new Error(result.error || 'Erro na conversão');
+        }
+      } else {
+        toast.info('Em breve!', {
+          description: `A exportação para ${format} estará disponível em breve.`
+        });
       }
-    } else {
-      toast.info('Em breve!', {
-        description: `A exportação para ${format} estará disponível em breve.`
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Erro ao exportar', {
+        description: error instanceof Error ? error.message : 'Ocorreu um erro inesperado'
       });
+      throw error;
     }
   }, [exportProvides]);
 

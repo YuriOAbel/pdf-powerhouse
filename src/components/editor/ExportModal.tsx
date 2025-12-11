@@ -48,25 +48,13 @@ export const ExportModal = ({ onExport }: ExportModalProps) => {
   });
 
   const handleExport = async () => {
-    // Verificar se o formato selecionado é suportado
-    if (selectedFormat !== 'pdf') {
-      toast.info('Em breve!', {
-        description: `A exportação para ${formats.find(f => f.id === selectedFormat)?.label} estará disponível em breve.`
-      });
-      return;
-    }
-
     setIsProcessing(true);
     try {
       await onExport(selectedFormat, filename);
-      toast.success('Download iniciado!', {
-        description: `Seu arquivo ${filename}.${selectedFormat} está sendo baixado.`
-      });
       setIsExportModalOpen(false);
     } catch (error) {
-      toast.error('Erro ao exportar', {
-        description: 'Ocorreu um erro ao processar seu arquivo. Tente novamente.'
-      });
+      // O erro já é tratado no handleExport do PDFEditorNPM
+      console.error('Export error:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -140,7 +128,7 @@ export const ExportModal = ({ onExport }: ExportModalProps) => {
             ) : (
               <>
                 <Download className="w-5 h-5" />
-                Baixar {filename}{formats.find(f => f.id === selectedFormat)?.extension}
+                Baixar arquivo
               </>
             )}
           </Button>
