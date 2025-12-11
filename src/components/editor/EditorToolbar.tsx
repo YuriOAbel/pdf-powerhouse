@@ -214,20 +214,9 @@ export const EditorToolbar = ({ leftPanel, rightPanel, onToggleLeft, onToggleRig
     e.target.value = '';
   };
 
-  // Export handler
-  const handleExport = async () => {
-    if (!exportProvider) {
-      toast.error('Exportação não disponível');
-      return;
-    }
-    
-    try {
-      exportProvider.download();
-      toast.success('PDF exportado com sucesso!');
-    } catch (error) {
-      console.error('Export error:', error);
-      toast.error('Erro ao exportar PDF');
-    }
+  // Export handler - abre o modal de exportação
+  const handleExport = () => {
+    useEditorStore.getState().setIsExportModalOpen(true);
   };
 
   // Zoom handlers

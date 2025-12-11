@@ -7,7 +7,6 @@ import {
   FileType,
   Download,
   X,
-  Check,
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,12 +28,11 @@ interface ExportFormat {
 
 const formats: ExportFormat[] = [
   { id: 'pdf', label: 'PDF', extension: '.pdf', icon: <FileText className="w-6 h-6" />, color: 'bg-red-500' },
-  { id: 'docx', label: 'Word', extension: '.docx', icon: <FileText className="w-6 h-6" />, color: 'bg-blue-500' },
-  { id: 'pptx', label: 'PowerPoint', extension: '.pptx', icon: <Presentation className="w-6 h-6" />, color: 'bg-orange-500' },
-  { id: 'xlsx', label: 'Excel', extension: '.xlsx', icon: <FileSpreadsheet className="w-6 h-6" />, color: 'bg-green-500' },
   { id: 'png', label: 'PNG', extension: '.png', icon: <FileImage className="w-6 h-6" />, color: 'bg-purple-500' },
+  { id: 'docx', label: 'Word', extension: '.docx', icon: <FileText className="w-6 h-6" />, color: 'bg-blue-500' },
+  { id: 'xlsx', label: 'Excel', extension: '.xlsx', icon: <FileSpreadsheet className="w-6 h-6" />, color: 'bg-green-500' },
   { id: 'jpg', label: 'JPG', extension: '.jpg', icon: <FileImage className="w-6 h-6" />, color: 'bg-pink-500' },
-  { id: 'txt', label: 'Texto', extension: '.txt', icon: <FileType className="w-6 h-6" />, color: 'bg-gray-500' },
+  { id: 'pptx', label: 'PowerPoint', extension: '.pptx', icon: <Presentation className="w-6 h-6" />, color: 'bg-orange-500' },
 ];
 
 interface ExportModalProps {
@@ -50,6 +48,14 @@ export const ExportModal = ({ onExport }: ExportModalProps) => {
   });
 
   const handleExport = async () => {
+    // Verificar se o formato selecionado é suportado
+    if (selectedFormat !== 'pdf') {
+      toast.info('Em breve!', {
+        description: `A exportação para ${formats.find(f => f.id === selectedFormat)?.label} estará disponível em breve.`
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await onExport(selectedFormat, filename);
@@ -72,13 +78,17 @@ export const ExportModal = ({ onExport }: ExportModalProps) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-2xl">
             <div className="p-2 rounded-xl bg-gradient-hero">
-              <Check className="w-5 h-5 text-primary-foreground" />
+              <Download className="w-5 h-5 text-primary-foreground" />
             </div>
-            Seu documento está pronto!
+            Ótimo trabalho!
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          <p className="text-muted-foreground text-center">
+            Selecione o formato para baixar seu arquivo.
+          </p>
+
           {/* Filename input */}
           <div className="space-y-2">
             <Label htmlFor="filename">Nome do arquivo</Label>

@@ -7,7 +7,7 @@ import { Scroller, ScrollPluginPackage } from '@embedpdf/plugin-scroll/react';
 import { LoaderPluginPackage } from '@embedpdf/plugin-loader/react';
 import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/react';
 import { ZoomPluginPackage, ZoomMode, useZoomCapability } from '@embedpdf/plugin-zoom/react';
-import { ExportPluginPackage } from '@embedpdf/plugin-export/react';
+import { ExportPluginPackage, useExportCapability } from '@embedpdf/plugin-export/react';
 import { HistoryPluginPackage } from '@embedpdf/plugin-history/react';
 import { AnnotationLayer, AnnotationPluginPackage, useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { RedactionLayer, RedactionPluginPackage } from '@embedpdf/plugin-redaction/react';
@@ -26,6 +26,8 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { CommentsPanel } from './CommentsPanel';
 import { ThumbnailsSidebar } from './ThumbnailsSidebar';
 import { PageNavigator } from './PageNavigator';
+import { ExportModal } from './ExportModal';
+import { toast } from 'sonner';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -52,6 +54,25 @@ const PDFEditorContent = ({
   isMobile: boolean;
 }) => {
   const { state: annotationState, provides: annotationProvides } = useAnnotation();
+  const { provides: exportProvides } = useExportCapability();
+
+  // Função de exportação para PDF
+  const handleExport = useCallback(async (format: string, filename: string) => {
+    if (format === 'pdf' && exportProvides) {
+      try {
+        exportProvides.download();
+        toast.success('PDF exportado com sucesso!');
+      } catch (error) {
+        console.error('Export error:', error);
+        toast.error('Erro ao exportar PDF');
+        throw error;
+      }
+    } else {
+      toast.info('Em breve!', {
+        description: `A exportação para ${format} estará disponível em breve.`
+      });
+    }
+  }, [exportProvides]);
 
   // Definir defaults FIXOS para FreeText quando o plugin estiver pronto
   useEffect(() => {
@@ -230,6 +251,9 @@ const PDFEditorContent = ({
           </DrawerContent>
         </Drawer>
       )}
+
+      {/* Export Modal - Available for both desktop and mobile */}
+      <ExportModal onExport={handleExport} />
     </div>
   );
 };
