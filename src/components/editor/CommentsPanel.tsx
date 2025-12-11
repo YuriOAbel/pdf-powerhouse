@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react';
 import { X, Send, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { TrackedAnnotation } from '@embedpdf/plugin-annotation';
 import { cn } from '@/lib/utils';
+import { PdfAnnotationSubtype, uuidV4 } from '@embedpdf/models';
 
 interface CommentsPanelProps {
   onClose: () => void;
@@ -18,6 +18,7 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
   const { state, provides } = useAnnotation();
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [expandedPages, setExpandedPages] = useState<Record<number, boolean>>({});
+  const [replies, setReplies] = useState<Record<string, Array<{ id: string; text: string; timestamp: Date }>>>({});
 
   // Get annotations grouped by page from state structure
   const annotationsByPage = useMemo(() => {
@@ -49,12 +50,22 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
     }));
   };
 
-  const handleReply = (annotationId: string) => {
+  const handleReply = (annotationId: string, pageIndex: number) => {
     const text = replyText[annotationId]?.trim();
     if (!text || !provides) return;
     
-    // Add reply to annotation (if supported by the plugin)
-    console.log('Reply to annotation:', annotationId, text);
+    // Salvar resposta apenas localmente (não modificar o contents da anotação)
+    setReplies(prev => ({
+      ...prev,
+      [annotationId]: [
+        ...(prev[annotationId] || []),
+        {
+          id: uuidV4(),
+          text,
+          timestamp: new Date(),
+        },
+      ],
+    }));
     
     // Clear reply input
     setReplyText(prev => ({ ...prev, [annotationId]: '' }));
@@ -104,10 +115,52 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
     }
   };
 
+  const getAnnotationLabel = (type: number): string => {
+    switch (type) {
+      case PdfAnnotationSubtype.HIGHLIGHT:
+        return 'Destacar';
+      case PdfAnnotationSubtype.UNDERLINE:
+        return 'Sublinhado';
+      case PdfAnnotationSubtype.STRIKEOUT:
+        return 'Riscado';
+      case PdfAnnotationSubtype.SQUIGGLY:
+        return 'Ondulado';
+      case PdfAnnotationSubtype.INK:
+        return 'Caneta';
+      case PdfAnnotationSubtype.SQUARE:
+        return 'Retângulo';
+      case PdfAnnotationSubtype.CIRCLE:
+        return 'Círculo';
+      case PdfAnnotationSubtype.LINE:
+        return 'Linha';
+      case PdfAnnotationSubtype.FREETEXT:
+        return 'Texto Livre';
+      case PdfAnnotationSubtype.STAMP:
+        return 'Imagem';
+      default:
+        return 'Anotação';
+    }
+  };
+
+  const getAnnotationTitle = (annotation: TrackedAnnotation, pageAnnotations: TrackedAnnotation[]): string => {
+    const type = annotation.object.type;
+    const label = getAnnotationLabel(type);
+    
+    // Contar quantas anotações do mesmo tipo existem na página
+    const sameTypeAnnotations = pageAnnotations.filter(a => a.object.type === type);
+    
+    if (sameTypeAnnotations.length > 1) {
+      const index = sameTypeAnnotations.findIndex(a => a.object.id === annotation.object.id);
+      return `${label} ${index + 1}`;
+    }
+    
+    return label;
+  };
+
   return (
-    <div className={panelClass}>
+    <div className={panelClass} style={{ height: '100%', maxHeight: '100vh' }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
+      <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-semibold text-sm">Comentários</h3>
@@ -121,7 +174,7 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="p-2">
           {totalAnnotations === 0 ? (
             <div className="text-center py-12 px-4">
@@ -163,10 +216,12 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
                     
                     <CollapsibleContent className="space-y-2 pb-2">
                       {annotations.map((annotation) => {
-                        const annType = (annotation.object as any)?.subtype || (annotation.object as any)?.type || 'unknown';
-                        const contents = (annotation.object as any)?.contents || '';
-                        const createdAt = (annotation.object as any)?.creationDate;
                         const annotationId = annotation.object?.id || '';
+                        const annotationType = annotation.object.type;
+                        const annotationTitle = getAnnotationTitle(annotation, annotations);
+                        const contents = (annotation.object as any)?.contents || '';
+                        const createdAt = (annotation.object as any)?.created;
+                        const annotationReplies = replies[annotationId] || [];
                         
                         return (
                           <div
@@ -179,21 +234,44 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
                             onClick={() => handleSelectAnnotation(annotation, pageIndex)}
                           >
                             <div className="flex items-start gap-2">
-                              <span className="text-lg">{getAnnotationIcon(annType)}</span>
+                              <span className="text-lg">{getAnnotationIcon(getAnnotationLabel(annotationType))}</span>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs font-medium text-muted-foreground capitalize">
-                                    {annType}
+                                  <span className="text-xs font-medium text-foreground">
+                                    {annotationTitle}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {formatDate(createdAt)}
                                   </span>
                                 </div>
                                 
-                                {contents && (
-                                  <p className="text-sm mt-1 break-words">
+                                {/* Exibir texto selecionado (para highlights, underlines, etc) */}
+                                {(annotation.object as any)?.custom?.text && (
+                                  <p className="text-xs text-muted-foreground mt-1 break-words">
+                                    "{(annotation.object as any).custom.text}"
+                                  </p>
+                                )}
+
+                                {/* Exibir conteúdo do FreeText */}
+                                {annotationType === PdfAnnotationSubtype.FREETEXT && contents && (
+                                  <p className="text-xs text-foreground mt-1 break-words bg-muted/30 p-2 rounded">
                                     {contents}
                                   </p>
+                                )}
+
+                                {/* Exibir respostas salvas */}
+                                {annotationReplies.length > 0 && (
+                                  <div className="mt-2 space-y-1 border-l-2 border-primary/30 pl-2">
+                                    {annotationReplies.map((reply, index) => (
+                                      <div key={reply.id} className="text-xs">
+                                        <span className="font-medium text-primary">Resposta {index + 1}:</span>
+                                        <p className="text-foreground mt-0.5">{reply.text}</p>
+                                        <span className="text-muted-foreground text-[10px]">
+                                          {formatDate(reply.timestamp.getTime())}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -209,7 +287,7 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
                                 }))}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
-                                    handleReply(annotationId);
+                                    handleReply(annotationId, pageIndex);
                                   }
                                 }}
                                 className="h-8 text-sm"
@@ -221,7 +299,7 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
                                 className="h-8 w-8 shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleReply(annotationId);
+                                  handleReply(annotationId, pageIndex);
                                 }}
                                 disabled={!replyText[annotationId]?.trim()}
                               >
@@ -238,7 +316,7 @@ export const CommentsPanel = ({ onClose, anchor = 'right', isMobile = false }: C
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 };
