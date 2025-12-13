@@ -32,6 +32,7 @@ import { convertPdfToImages, downloadAllImages } from '@/lib/convertPdfToImage';
 import { convertPdfToWord, downloadWordFile } from '@/lib/convertPdfToWord';
 import { convertPdfToText, downloadTextFile } from '@/lib/convertPdfToText';
 import { convertPdfToPowerPoint, downloadPowerPointFile } from '@/lib/convertPdfToPowerPoint';
+import { compressPdf, downloadCompressedPdf } from '@/lib/compressPdf';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -244,6 +245,45 @@ const PDFEditorContent = ({
           });
         } else {
           throw new Error(result.error || 'Erro na conversão para PowerPoint');
+        }
+      } else if (format === 'compress') {
+        console.log('🗜️ Iniciando compressão de PDF...');
+        toast.info('Preparando compressão...', {
+          description: 'Obtendo PDF com anotações'
+        });
+        
+        const task = exportProvides.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        
+        const originalSizeMB = (pdfBlob.size / (1024 * 1024)).toFixed(2);
+        
+        toast.info('Comprimindo PDF...', {
+          description: `Tamanho original: ${originalSizeMB} MB`,
+          duration: 15000,
+        });
+        
+        const result = await compressPdf({
+          pdfBlob,
+          filename,
+          quality: 'ebook', // Boa compressão com qualidade razoável
+        });
+        
+        if (result.success && result.data) {
+          const compressedSizeMB = ((result.compressedSizeBytes || 0) / (1024 * 1024)).toFixed(2);
+          const ratio = result.compressionRatioPercent || 0;
+          
+          toast.success('Compressão concluída!', {
+            description: `Redução de ${ratio.toFixed(1)}% (${originalSizeMB} MB → ${compressedSizeMB} MB)`
+          });
+          
+          downloadCompressedPdf(result.data, `${filename}_compressed`);
+          
+          toast.success('Download concluído!', {
+            description: `Arquivo ${filename}_compressed.pdf baixado`
+          });
+        } else {
+          throw new Error(result.error || 'Erro na compressão do PDF');
         }
       } else {
         toast.info('Em breve!', {

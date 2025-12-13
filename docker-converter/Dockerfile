@@ -8,6 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # LibreOffice: Engine para conversões de documentos Office
 # unoconv: Conversor universal usando LibreOffice
 # pdf2docx: Conversão específica de PDF para DOCX
+# ghostscript: Compressão e manipulação de PDFs
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-por \
@@ -20,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     poppler-utils \
+    ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 # Atualizar pip

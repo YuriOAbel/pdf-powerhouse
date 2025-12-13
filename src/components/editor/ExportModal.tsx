@@ -7,7 +7,8 @@ import {
   FileType,
   Download,
   X,
-  Loader2
+  Loader2,
+  FileArchive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +29,7 @@ interface ExportFormat {
 
 const formats: ExportFormat[] = [
   { id: 'pdf', label: 'PDF', extension: '.pdf', icon: <FileText className="w-6 h-6" />, color: 'bg-red-500' },
+  { id: 'compress', label: 'PDF Comprimido', extension: '.pdf', icon: <FileArchive className="w-6 h-6" />, color: 'bg-indigo-500' },
   { id: 'png', label: 'PNG', extension: '.png', icon: <FileImage className="w-6 h-6" />, color: 'bg-purple-500' },
   { id: 'docx', label: 'Word', extension: '.docx', icon: <FileText className="w-6 h-6" />, color: 'bg-blue-500' },
   { id: 'xlsx', label: 'Excel', extension: '.xlsx', icon: <FileSpreadsheet className="w-6 h-6" />, color: 'bg-green-500' },
