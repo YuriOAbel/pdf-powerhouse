@@ -48,7 +48,8 @@ const PDFEditorContent = ({
   setLeftPanel,
   setRightPanel,
   pluginsReady,
-  isMobile
+  isMobile,
+  pdfUrl
 }: {
   leftPanel: PanelType;
   rightPanel: PanelType;
@@ -56,6 +57,7 @@ const PDFEditorContent = ({
   setRightPanel: (p: PanelType) => void;
   pluginsReady: boolean;
   isMobile: boolean;
+  pdfUrl: string;
 }) => {
   const { state: annotationState, provides: annotationProvides } = useAnnotation();
   const { provides: exportProvides } = useExportCapability();
@@ -79,13 +81,17 @@ const PDFEditorContent = ({
         console.log(`🖼️ Iniciando conversão para ${format.toUpperCase()}...`);
         // Exportação de imagens usando PDF.js no frontend
         toast.info('Preparando conversão...', {
-          description: 'Gerando PDF com todas as anotações'
+          description: 'Carregando PDF completo'
         });
 
-        // IMPORTANTE: Obter o PDF completo e editado do EmbedPDF
-        // saveAsCopy() retorna um ArrayBuffer com todas as anotações aplicadas
-        const task = exportProvides.saveAsCopy();
-        const arrayBuffer = await task.toPromise();
+        // IMPORTANTE: Para PNG/JPG, buscar o PDF original pela URL
+        // Isso garante que todas as páginas sejam convertidas, não apenas a visualizada
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error('Erro ao carregar PDF original');
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
         
         // Converter ArrayBuffer para Blob
         const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
@@ -108,15 +114,23 @@ const PDFEditorContent = ({
         });
 
         if (result.success) {
+          const downloadMessage = result.totalPages === 1 
+            ? 'Preparando download da imagem...'
+            : `Criando arquivo ZIP com ${result.totalPages} imagens...`;
+          
           toast.success(`${result.totalPages} página(s) convertida(s)!`, {
-            description: 'Iniciando downloads...'
+            description: downloadMessage
           });
 
-          // Baixar todas as imagens
-          downloadAllImages(result.images, filename, format as 'png' | 'jpg');
+          // Baixar todas as imagens (ZIP para múltiplas páginas, imagem única para 1 página)
+          await downloadAllImages(result.images, filename, format as 'png' | 'jpg');
+          
+          const successMessage = result.totalPages === 1
+            ? 'Imagem baixada com sucesso!'
+            : `Arquivo ZIP com ${result.totalPages} imagens baixado!`;
           
           toast.success('Download concluído!', {
-            description: `${result.totalPages} arquivo(s) baixado(s)`
+            description: successMessage
           });
         } else {
           throw new Error(result.error || 'Erro na conversão');
@@ -243,7 +257,7 @@ const PDFEditorContent = ({
       });
       throw error;
     }
-  }, [exportProvides]);
+  }, [exportProvides, pdfUrl]);
 
   // Definir defaults FIXOS para FreeText quando o plugin estiver pronto
   useEffect(() => {
@@ -536,6 +550,7 @@ export const PDFEditorNPM = ({
           setRightPanel={setRightPanel}
           pluginsReady={pluginsReady}
           isMobile={isMobile}
+          pdfUrl={pdfUrl}
         />
       )}
     </EmbedPDF>

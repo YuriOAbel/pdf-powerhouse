@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import JSZip from 'jszip';
 
 // Configurar worker do PDF.js para usar arquivo local na pasta public
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -133,21 +134,81 @@ export function downloadImage(imageData: string, filename: string, format: 'png'
 }
 
 /**
- * Baixa todas as imagens de uma vez (arquivo ZIP seria melhor)
+ * Converte data URL para Blob
  */
-export function downloadAllImages(
+function dataURLtoBlob(dataURL: string): Blob {
+  const arr = dataURL.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+/**
+ * Cria um arquivo ZIP com todas as imagens
+ */
+async function createZipWithImages(
+  images: ConvertedImage[],
+  filename: string,
+  format: 'png' | 'jpg'
+): Promise<Blob> {
+  const zip = new JSZip();
+  
+  // Adicionar cada imagem ao ZIP
+  images.forEach((img) => {
+    const pageFilename = `${filename}_pagina_${img.page}.${format}`;
+    const blob = dataURLtoBlob(img.data);
+    zip.file(pageFilename, blob);
+  });
+  
+  // Gerar o arquivo ZIP
+  const zipBlob = await zip.generateAsync({ 
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+  
+  return zipBlob;
+}
+
+/**
+ * Baixa um arquivo ZIP
+ */
+function downloadZip(zipBlob: Blob, filename: string) {
+  const url = URL.createObjectURL(zipBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.zip`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Baixa todas as imagens:
+ * - Se for apenas 1 página: baixa a imagem diretamente
+ * - Se for 2+ páginas: cria um ZIP com todas as imagens
+ */
+export async function downloadAllImages(
   images: ConvertedImage[],
   filename: string,
   format: 'png' | 'jpg'
 ) {
-  images.forEach((img) => {
-    const pageFilename = images.length > 1 
-      ? `${filename}_pagina_${img.page}`
-      : filename;
-    
-    // Pequeno delay entre downloads para não sobrecarregar
-    setTimeout(() => {
-      downloadImage(img.data, pageFilename, format);
-    }, img.page * 100);
-  });
+  if (images.length === 1) {
+    // Uma página apenas: baixar imagem diretamente
+    console.log('📥 Baixando imagem única...');
+    downloadImage(images[0].data, filename, format);
+  } else {
+    // Múltiplas páginas: criar ZIP
+    console.log(`📦 Criando ZIP com ${images.length} imagens...`);
+    const zipBlob = await createZipWithImages(images, filename, format);
+    console.log('📥 Baixando arquivo ZIP...');
+    downloadZip(zipBlob, filename);
+  }
 }
