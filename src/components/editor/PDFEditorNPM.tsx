@@ -29,6 +29,9 @@ import { PageNavigator } from './PageNavigator';
 import { ExportModal } from './ExportModal';
 import { toast } from 'sonner';
 import { convertPdfToImages, downloadAllImages } from '@/lib/convertPdfToImage';
+import { convertPdfToWord, downloadWordFile } from '@/lib/convertPdfToWord';
+import { convertPdfToText, downloadTextFile } from '@/lib/convertPdfToText';
+import { convertPdfToPowerPoint, downloadPowerPointFile } from '@/lib/convertPdfToPowerPoint';
 
 interface PDFEditorNPMProps {
   pdfUrl: string;
@@ -117,6 +120,116 @@ const PDFEditorContent = ({
           });
         } else {
           throw new Error(result.error || 'Erro na conversão');
+        }
+      } else if (format === 'docx') {
+        console.log('📝 Iniciando conversão para Word...');
+        // Exportação para Word usando Supabase Edge Function
+        toast.info('Preparando conversão...', {
+          description: 'Gerando documento Word estrutural'
+        });
+
+        // Obter o PDF completo e editado do EmbedPDF
+        const task = exportProvides.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        
+        // Converter ArrayBuffer para Blob
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+
+        toast.info('Convertendo para Word...', {
+          description: 'Processando documento no servidor',
+          duration: 15000,
+        });
+
+        // Converter usando backend (Supabase Edge Function)
+        const result = await convertPdfToWord({
+          pdfBlob,
+          filename,
+        });
+
+        if (result.success && result.data) {
+          toast.success('Conversão concluída!', {
+            description: 'Iniciando download...'
+          });
+
+          // Baixar arquivo Word
+          downloadWordFile(result.data, filename);
+          
+          toast.success('Download concluído!', {
+            description: `Arquivo ${filename}.docx baixado`
+          });
+        } else {
+          throw new Error(result.error || 'Erro na conversão para Word');
+        }
+      } else if (format === 'txt') {
+        console.log('📝 Iniciando extração de texto com OCR...');
+        // Extração de texto usando Tesseract OCR
+        toast.info('Preparando extração...', {
+          description: 'Analisando documento'
+        });
+
+        // Obter o PDF completo e editado do EmbedPDF
+        const task = exportProvides.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        
+        // Converter ArrayBuffer para Blob
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+
+        toast.info('Extraindo texto com OCR...', {
+          description: 'Processando todas as páginas',
+          duration: 30000,
+        });
+
+        // Extrair texto usando backend (Supabase Edge Function + Tesseract)
+        const result = await convertPdfToText({
+          pdfBlob,
+          filename,
+          language: 'por+eng', // Português + Inglês
+        });
+
+        if (result.success && result.text) {
+          toast.success('Extração concluída!', {
+            description: `${result.pages} página(s), ${result.characters} caracteres`
+          });
+
+          // Baixar arquivo de texto
+          downloadTextFile(result.text, filename);
+          
+          toast.success('Download concluído!', {
+            description: `Arquivo ${filename}.txt baixado`
+          });
+        } else {
+          throw new Error(result.error || 'Erro na extração de texto');
+        }
+      } else if (format === 'pptx') {
+        console.log('📊 Iniciando conversão para PowerPoint...');
+        toast.info('Preparando conversão...', {
+          description: 'Gerando apresentação PowerPoint'
+        });
+        
+        const task = exportProvides.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        
+        toast.info('Convertendo para PowerPoint...', {
+          description: 'Processando documento no servidor',
+          duration: 20000,
+        });
+        
+        const result = await convertPdfToPowerPoint({
+          pdfBlob,
+          filename,
+        });
+        
+        if (result.success && result.data) {
+          toast.success('Conversão concluída!', {
+            description: 'Iniciando download...'
+          });
+          downloadPowerPointFile(result.data, filename);
+          toast.success('Download concluído!', {
+            description: `Arquivo ${filename}.pptx baixado`
+          });
+        } else {
+          throw new Error(result.error || 'Erro na conversão para PowerPoint');
         }
       } else {
         toast.info('Em breve!', {
