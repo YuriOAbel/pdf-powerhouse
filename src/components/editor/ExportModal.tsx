@@ -27,7 +27,7 @@ interface ExportFormat {
   color: string;
 }
 
-const formats: ExportFormat[] = [
+const allFormats: ExportFormat[] = [
   { id: 'pdf', label: 'PDF', extension: '.pdf', icon: <FileText className="w-6 h-6" />, color: 'bg-red-500' },
   { id: 'compress', label: 'PDF Comprimido', extension: '.pdf', icon: <FileArchive className="w-6 h-6" />, color: 'bg-indigo-500' },
   { id: 'png', label: 'PNG', extension: '.png', icon: <FileImage className="w-6 h-6" />, color: 'bg-purple-500' },
@@ -39,11 +39,20 @@ const formats: ExportFormat[] = [
 
 interface ExportModalProps {
   onExport: (format: string, filename: string) => Promise<void>;
+  excludeFormats?: string[]; // Formatos a serem excluídos
 }
 
-export const ExportModal = ({ onExport }: ExportModalProps) => {
+export const ExportModal = ({ onExport, excludeFormats = ['xlsx'] }: ExportModalProps) => {
   const { isExportModalOpen, setIsExportModalOpen, pdfFile, isProcessing, setIsProcessing } = useEditorStore();
-  const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
+  
+  // Filtrar formatos baseado em excludeFormats
+  const formats = allFormats.filter(format => !excludeFormats.includes(format.id));
+  
+  const [selectedFormat, setSelectedFormat] = useState<string>(() => {
+    // Selecionar primeiro formato disponível
+    return formats[0]?.id || 'pdf';
+  });
+  
   const [filename, setFilename] = useState(() => {
     const name = pdfFile?.name || 'documento';
     return name.replace(/\.[^/.]+$/, '');
